@@ -5,7 +5,7 @@ const LIB = (() => {
   const GL = {}, STEMS = [];
   GLOSS.forEach(g => g.m.forEach(m => { const l = m.toLowerCase(); GL[l] = g; if (/[а-я]/i.test(l)) STEMS.push([l, g]); }));
   const find = low => GL[low] || (STEMS.find(([s]) => low.startsWith(s)) || [])[1];
-  const byKey = k => GLOSS.find(g => g.k === k);
+  const byKey = k => { const g = GLOSS.find(x => x.k === k), e = g && I18N.lang === 'en' && typeof GLOSS_EN !== 'undefined' && GLOSS_EN[k]; return e ? { ...g, t: e[0], d: e[1], f: e[2] || undefined } : g; };
   const chap = id => BOOK.find(c => c.id === id);
   const TOPIC_CH = { acct: 'statements', ev: 'ev', mult: 'mult', dcf: 'dcf', wacc: 'wacc', tvm: 'tvm', comps: 'comps', dilution: 'dilution', ma: 'ma', lbo: 'lbo', credit: 'debt', markets: 'ecm', career: 'interview' };
   const flat = b => b.slice(1).flat(2).filter(x => typeof x === 'string').join(' ');
