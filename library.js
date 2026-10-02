@@ -86,6 +86,12 @@ const LIB = (() => {
   };
   const bpct = (id, i) => S.read[`bk:${id}:${i}`] ? 100 : Math.round((S.pos[`bk:${id}:${i}`] || 0) * 100);
   function booksPane() {
+    const dir = BK.dir; BK.dir = null;
+    const h = booksInner();
+    if (dir === 'push' && BK.open && !BK.docs[BK.open]) BK.dir = dir;   // книга ещё грузится: анимацию покажем при следующей отрисовке
+    return dir ? `<div class="${dir}">${h}</div>` : h;
+  }
+  function booksInner() {
     if (!BK.tried) loadIndex();
     if (BK.open) return bookPage(BK.open);
     if (!BK.idx) return '<div class="card"><p class="small mute" style="margin:0">Загрузка…</p></div>';
@@ -153,8 +159,8 @@ const LIB = (() => {
       }
       case 'bkseg': seg = D.v; if (D.v === 'books') BK.tried = false; render(); return true;
       case 'readch': open(D.id); return true;
-      case 'bkopen': BK.open = D.id; render(); return true;
-      case 'bkback': BK.open = null; render(); return true;
+      case 'bkopen': BK.open = D.id; BK.dir = 'push'; render(); return true;
+      case 'bkback': BK.open = null; BK.dir = 'pull'; render(); return true;
       case 'readclose': ch = null; render(); window.scrollTo(0, 0); return true;
       case 'fsup': S.fs = Math.min(24, (S.fs || 17) + 1); save(); render(); return true;
       case 'fsdown': S.fs = Math.max(14, (S.fs || 17) - 1); save(); render(); return true;
@@ -191,5 +197,5 @@ const LIB = (() => {
   };
   const syncAll = () => { sync(); syncLessons(); syncDrills(); };
   syncAll();
-  return { sync: syncAll, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, sub: () => (seg || '') + ':' + (BK.open || ''), reset: () => { ch = null; BK.open = null; } };
+  return { sync: syncAll, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, sub: () => seg || '', reset: () => { ch = null; BK.open = null; } };
 })();

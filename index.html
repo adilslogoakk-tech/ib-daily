@@ -254,6 +254,9 @@ html.themeswap *{transition:background-color .45s,color .45s,border-color .45s,f
 /* отключение: из настроек или системой («уменьшить движение») */
 /* переключение внутри экрана (сегменты, язык), списки и удаление */
 @keyframes segin{from{opacity:0}}
+@keyframes push{from{opacity:0;transform:translateX(26px)}}
+@keyframes pull{from{opacity:0;transform:translateX(-26px)}}
+.push{animation:push .28s ease-out}.pull{animation:pull .28s ease-out}
 @keyframes segon{from{transform:scale(.9)}}
 @keyframes itemin{from{transform:translateX(-8px)}}
 @keyframes itemout{to{opacity:0;transform:translateX(24px) scale(.97);max-height:0;margin:0;padding-top:0;padding-bottom:0}}
