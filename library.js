@@ -116,5 +116,12 @@ const LIB = (() => {
     }
     return false;
   }
-  return { find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, reset: () => { ch = null; } };
+  // английская версия глав (BOOK_EN) подменяет поля главы на месте; русский оригинал хранится в c.ru
+  const sync = () => BOOK.forEach(c => {
+    if (!c.ru) c.ru = { title: c.title, tag: c.tag, intro: c.intro, blocks: c.blocks };
+    const e = I18N.lang === 'en' && typeof BOOK_EN !== 'undefined' && BOOK_EN[c.id];
+    Object.assign(c, e || c.ru);
+  });
+  sync();
+  return { sync, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, reset: () => { ch = null; } };
 })();
