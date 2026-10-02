@@ -219,8 +219,8 @@ function render() {
   if (!sess && tab === 'news') loadNews();
   if (!enter) app.classList.remove('enter'); else if (!booting && animOn()) enterView();
   // переключение внутри экрана (Позже / Главы / Книги, язык): плавно показываем только содержимое под переключателем
-  const sub = I18N.lang;
-  if (!enter && sub !== lastSub && !booting && animOn()) { app.classList.remove('sub'); void app.offsetWidth; app.classList.add('sub'); clearTimeout(subT); subT = setTimeout(() => app.classList.remove('sub'), 900); }
+  const sub = (tab === 'book' ? LIB.sub() : '') + '|' + I18N.lang;
+  if (!enter && sub !== lastSub && !booting && animOn()) { app.classList.remove('sub'); void app.offsetWidth; app.classList.add('sub'); clearTimeout(subT); subT = setTimeout(() => app.classList.remove('sub'), 300); }
   lastSub = sub;
   if (document.getElementById('weekbox')) FX.week.fill();
   T.onRender();

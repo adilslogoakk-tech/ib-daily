@@ -253,12 +253,12 @@ html.themeswap *{transition:background-color .45s,color .45s,border-color .45s,f
 .flash .in.flip{animation:flip .4s cubic-bezier(.2,.8,.2,1)}
 /* отключение: из настроек или системой («уменьшить движение») */
 /* переключение внутри экрана (сегменты, язык), списки и удаление */
-@keyframes segin{from{transform:translateY(6px)}}
+@keyframes segin{from{opacity:0}}
 @keyframes segon{from{transform:scale(.9)}}
 @keyframes itemin{from{transform:translateX(-8px)}}
 @keyframes itemout{to{opacity:0;transform:translateX(24px) scale(.97);max-height:0;margin:0;padding-top:0;padding-bottom:0}}
 .seg button{transition:background-color .25s,color .25s,transform .2s}.seg button:active{transform:scale(.94)}
-#app.sub .seg~*{animation:segin .2s ease-out}
+#app.sub .seg~*{animation:segin .16s ease-out}
 .card.out{animation:itemout .28s ease-in forwards;overflow:hidden}
 .rbar i{transition:width .25s ease-out}
 .card[data-act]{transition:transform .14s cubic-bezier(.3,1.4,.5,1),background-color .25s}.card[data-act]:active,.goal.chap:active{transform:scale(.97)}
