@@ -140,7 +140,7 @@ function jobsList() {
 views.jobs = () => {
   const cnt = {}; JOBS.jobs.forEach(j => { const k = jstat(j); cnt[k] = (cnt[k] || 0) + 1; });
   const n = appsToday();
-  return `<div class="tag">Вакансии</div><h1>Мои заявки</h1><p class="sub">${JOBS.jobs.length ? 'Обновлено ' + new Date(JOBS.updated).toLocaleString(I18N.loc, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Данные ещё не загружены'}</p>
+  return `<div class="row"><button class="pill" data-go="${jobsFrom}">‹ Назад</button></div><div class="tag" style="margin-top:14px">Вакансии</div><h1>Мои заявки</h1><p class="sub">${JOBS.jobs.length ? 'Обновлено ' + new Date(JOBS.updated).toLocaleString(I18N.loc, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Данные ещё не загружены'}</p>
   <div class="card"><div class="row sp"><b>Сегодня подано</b><span class="pill">${Math.min(n, 99)} из ${DAILY_APPS}</span></div><div class="bar" style="margin:10px 0 0"><i style="width:${Math.min(100, n / DAILY_APPS * 100)}%"></i></div></div>
   <input type="text" id="jq" placeholder="Поиск по названию или компании" value="${esc(jobQuery)}">
   <div class="chips">${Object.keys(ST).map(k => `<button class="chip ${jobFilter === k ? 'on' : ''}" data-filter="${k}">${ST[k]} <b>${cnt[k] || 0}</b></button>`).join('')}</div>
@@ -148,9 +148,9 @@ views.jobs = () => {
 };
 
 // ---------- навигация ----------
-let tab = 'today', sess = null, prevTab = 'today', lastKey = '', lastNav = '', booting = true, enterT = null;
-const TABS = [['today', 'Сегодня'], ['learn', 'Учёба'], ['book', 'Книга'], ['jobs', 'Вакансии'], ['news', 'Новости'], ['goals', 'Прогресс']];
-function go(t) { FX.iv.stop(); LIB.closeSheet(); if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
+let tab = 'today', jobsFrom = 'goals', sess = null, prevTab = 'today', lastKey = '', lastNav = '', booting = true, enterT = null;
+const TABS = [['today', 'Сегодня'], ['learn', 'Учёба'], ['book', 'Книга'], ['news', 'Новости'], ['goals', 'Прогресс']];
+function go(t) { if (t === 'jobs' && tab !== 'jobs') jobsFrom = tab === 'jobs' ? 'goals' : tab; FX.iv.stop(); LIB.closeSheet(); if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
 let authErr = '';
 const RU_ERR = { 'Invalid login credentials': 'Неверный email или пароль', 'User already registered': 'Такой аккаунт уже есть, нажми «Войти»', 'Email not confirmed': 'Подтверди почту по письму, затем войди' };
 function authHtml() {
@@ -211,7 +211,7 @@ function hideSplash() {
 
 function render() {
   if (CLOUD.enabled && !CLOUD.on && !S.localOnly) { $('#nav').innerHTML = ''; lastNav = ''; $('#app').innerHTML = authHtml(); return; }
-  if (lastNav !== tab) { $('#nav').innerHTML = TABS.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-go="${k}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${l}</button>`).join(''); lastNav = tab; }
+  if (lastNav !== tab) { $('#nav').innerHTML = TABS.map(([k, l]) => `<button class="${tab === k || (k === 'goals' && tab === 'jobs') ? 'on' : ''}" data-go="${k}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${l}</button>`).join(''); lastNav = tab; }
   const key = sess ? sess.type + ':' + (sess.type === 'lesson' ? (sess.i < sess.l.cards.length ? 'r' + sess.i : 'q' + sess.qi) : (sess.qi ?? sess.i ?? '')) : tab === 'book' ? 'book:' + (LIB.cur() || '') : tab;
   const enter = key !== lastKey; lastKey = key;
   const app = $('#app');
@@ -240,7 +240,7 @@ views.today = () => {
   ${evToday()}
   ${FX.fu.html()}
   ${coachCard()}
-  <div class="card" data-go="jobs" style="cursor:pointer"><div class="row sp"><div><div class="tag">Заявки сегодня</div><div style="font-size:17px;font-weight:600;margin-top:2px">${appsToday()} из ${DAILY_APPS}</div></div><div class="dots">${Array.from({ length: DAILY_APPS }, (_, i) => `<i class="${i < appsToday() ? 'on' : ''}"></i>`).join('')}</div></div>${appsToday() < DAILY_APPS ? `<p class="small mute" style="margin:8px 0 0">Ещё ${DAILY_APPS - appsToday()} — ${JOBS.jobs.filter(j => jstat(j) === 'new').length} вакансий ждут. Открыть →</p>` : '<p class="small" style="margin:8px 0 0;color:var(--green)">Норма выполнена</p>'}</div>
+  <div class="card" data-go="jobs" style="cursor:pointer"><div class="row sp"><div><div class="tag">Заявки сегодня</div><div style="font-size:17px;font-weight:600;margin-top:2px">${appsToday()} из ${DAILY_APPS}</div></div><div class="dots">${Array.from({ length: DAILY_APPS }, (_, i) => `<i class="${i < appsToday() ? 'on' : ''}"></i>`).join('')}</div><span style="font-size:22px;margin-left:8px">›</span></div>${appsToday() < DAILY_APPS ? `<p class="small mute" style="margin:8px 0 0">Ещё ${DAILY_APPS - appsToday()} — ${JOBS.jobs.filter(j => jstat(j) === 'new').length} вакансий ждут. Открыть →</p>` : '<p class="small" style="margin:8px 0 0;color:var(--green)">Норма выполнена</p>'}</div>
   ${goal ? `<div class="card"><div class="tag">Цель из роадмапа</div><p style="margin:6px 0 0;font-size:16px">${esc(goal.t)}</p></div>` : ''}
   <div class="card"><div class="row sp"><h2 style="margin:0">Прогресс</h2><span class="small mute">Уровень ${L.n} · ${L.into}/200</span></div><div class="bar" style="margin-top:12px"><i style="width:${L.into / 2}%"></i></div>
   <div class="heat">${days.map(v => `<i class="${v ? 'l' + v : ''}"></i>`).join('')}</div><p class="small mute" style="margin:8px 0 0">Последние 6 недель</p></div>`;
@@ -376,6 +376,7 @@ views.goals = () => {
   const L = level();
   return `<div class="tag">Прогресс</div><h1>Мой путь в IB</h1><p class="sub">Phase 0: стажировка Big4 TS / M&amp;A, CFA L1, нетворкинг</p>
   <div class="grid2" style="margin-top:14px"><div class="stat"><span class="small mute">Серия</span><b data-count="${streak()}">${streak()}</b></div><div class="stat"><span class="small mute">Лучшая серия</span><b data-count="${Math.max(S.best, streak())}">${Math.max(S.best, streak())}</b></div><div class="stat"><span class="small mute">Всего XP</span><b data-count="${S.xp}">${S.xp}</b></div><div class="stat"><span class="small mute">Уровень</span><b style="font-size:19px">${L.name}</b></div></div>
+  <div class="card" data-go="jobs" style="cursor:pointer"><div class="row sp"><div><div class="tag">Вакансии</div><div style="font-size:17px;font-weight:600;margin-top:2px">Вакансии и заявки</div><div class="small mute">${JOBS.jobs.length} вакансий · сегодня подано ${appsToday()} из ${DAILY_APPS}</div></div><span style="font-size:22px">›</span></div></div>
   ${FX.week.card()}
   ${eventsCard()}
   ${requestsCard()}
