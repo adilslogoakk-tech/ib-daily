@@ -8,7 +8,30 @@ const LIB = (() => {
   // языковые пакеты контента: window.GLOSS_EN / BOOK_DE / LESSONS_AZ ... (русский оригинал остаётся запасным вариантом)
   const pk = n => window[n + '_' + I18N.lang.toUpperCase()];
   const byKey = k => { const g = GLOSS.find(x => x.k === k), t = pk('GLOSS'), e = g && t && t[k]; return e ? { ...g, t: e[0], d: e[1], f: e[2] || undefined } : g; };
-  const chap = id => BOOK.find(c => c.id === id);
+  // ---- свои книги (EPUB, разбитые на части по ~5 минут): лежат в облаке (kv), кэшируются в IndexedDB ----
+  const BK = { idx: null, docs: {}, lists: {}, tried: false, open: null };
+  const bdb = (mode, fn) => new Promise((res, rej) => {
+    const o = indexedDB.open('ibdaily-books', 1);
+    o.onupgradeneeded = () => o.result.createObjectStore('c');
+    o.onerror = () => rej(o.error);
+    o.onsuccess = () => { const t = o.result.transaction('c', mode), q = fn(t.objectStore('c')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); };
+  });
+  const cget = k => bdb('readonly', s => s.get(k)).catch(() => null), cset = (k, v) => bdb('readwrite', s => s.put(v, k)).catch(() => {});
+  async function loadIndex() {
+    BK.tried = true;
+    try { const d = CLOUD.on && await CLOUD.doc('books'); if (d) { BK.idx = d; cset('index', d); } } catch (e) {}
+    if (!BK.idx) BK.idx = (await cget('index')) || [];
+    if (tab === 'book') render();
+  }
+  async function loadBook(id) {
+    if (BK.docs[id]) return BK.docs[id];
+    let d = await cget('book:' + id);
+    if (!d && CLOUD.on) { try { d = await CLOUD.doc('book:' + id); if (d) cset('book:' + id, d); } catch (e) {} }
+    if (d) { BK.docs[id] = d; BK.lists[id] = d.parts.map((p, k) => ({ id: 'bk:' + id + ':' + k, bid: id, title: p.t, tag: d.title, intro: '', blocks: p.blocks, bk: true, idx: k })); }
+    return d;
+  }
+  const bpart = id => { const m = /^bk:(.+):(\d+)$/.exec(id), l = m && BK.lists[m[1]]; return l && l[+m[2]]; };
+  const chap = id => id && id.startsWith('bk:') ? bpart(id) : BOOK.find(c => c.id === id);
   const TOPIC_CH = { acct: 'statements', ev: 'ev', mult: 'mult', dcf: 'dcf', wacc: 'wacc', tvm: 'tvm', comps: 'comps', dilution: 'dilution', ma: 'ma', lbo: 'lbo', credit: 'debt', markets: 'ecm', career: 'interview' };
   const flat = b => b.slice(1).flat(2).filter(x => typeof x === 'string').join(' ');
   const mins = c => Math.max(3, Math.round(c.blocks.reduce((n, b) => n + flat(b).length, c.intro ? c.intro.length : 0) / 1100));
@@ -46,26 +69,44 @@ const LIB = (() => {
   }
 
   // ---------- вкладка «Книга» ----------
-  const block = b => {
-    const bold = s => s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'), P = s => `<p>${bold(hl(s))}</p>`;
+  const block = (b, raw) => {
+    const H = raw ? esc : hl, bold = s => s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>'), P = s => `<p>${bold(H(s))}</p>`;
     switch (b[0]) {
       case 'h': return `<h3 class="bh">${esc(b[1])}</h3>`;
       case 'p': return P(b[1]);
-      case 'ul': return `<ul>${b[1].map(x => `<li>${bold(hl(x))}</li>`).join('')}</ul>`;
-      case 'ol': return `<ol>${b[1].map(x => `<li>${bold(hl(x))}</li>`).join('')}</ol>`;
+      case 'ul': return `<ul>${b[1].map(x => `<li>${bold(H(x))}</li>`).join('')}</ul>`;
+      case 'ol': return `<ol>${b[1].map(x => `<li>${bold(H(x))}</li>`).join('')}</ol>`;
       case 'ex': return `<div class="bx ex"><div class="bxt">Пример: ${esc(b[1])}</div>${b[2].split('\n').map(P).join('')}</div>`;
       case 'key': return `<div class="bx key"><div class="bxt">Главное</div>${P(b[1])}</div>`;
       case 'warn': return `<div class="bx warn"><div class="bxt">Частая ошибка</div>${P(b[1])}</div>`;
-      case 'q': return `<div class="bx q"><div class="bxt">Вопрос на собеседовании</div><p><b>${hl(b[1])}</b></p>${P(b[2])}</div>`;
-      case 'tbl': return `<div class="tw"><table><tr>${b[1].map(h => `<th>${esc(h)}</th>`).join('')}</tr>${b[2].map(r => `<tr>${r.map(c => `<td>${hl(c)}</td>`).join('')}</tr>`).join('')}</table></div>`;
+      case 'q': return `<div class="bx q"><div class="bxt">Вопрос на собеседовании</div><p><b>${H(b[1])}</b></p>${P(b[2])}</div>`;
+      case 'tbl': return `<div class="tw"><table><tr>${b[1].map(h => `<th>${esc(h)}</th>`).join('')}</tr>${b[2].map(r => `<tr>${r.map(c => `<td>${H(c)}</td>`).join('')}</tr>`).join('')}</table></div>`;
     }
     return '';
   };
+  const bpct = (id, i) => S.read[`bk:${id}:${i}`] ? 100 : Math.round((S.pos[`bk:${id}:${i}`] || 0) * 100);
+  function booksPane() {
+    if (!BK.tried) loadIndex();
+    if (BK.open) return bookPage(BK.open);
+    if (!BK.idx) return '<div class="card"><p class="small mute" style="margin:0">Загрузка…</p></div>';
+    if (!BK.idx.length) return `<div class="card"><p class="small mute" style="margin:0;line-height:1.55">${CLOUD.on ? 'Здесь будут твои книги, разбитые на части по 5 минут чтения. Отправь мне EPUB в Claude Code, и я добавлю книгу сюда.' : 'Книги хранятся в твоём облаке. Войди в аккаунт в настройках, чтобы увидеть их.'}</p></div>`;
+    return BK.idx.map(b => { const done = Array.from({ length: b.parts }, (_, i) => bpct(b.id, i) === 100).filter(Boolean).length;
+      return `<div class="card" data-act="bkopen" data-id="${b.id}" style="cursor:pointer"><div class="tag">${b.mins} мин · ${b.parts} частей</div><div style="font-weight:600;margin:4px 0 2px;line-height:1.35" translate="no">${esc(b.title)}</div>${b.author ? `<div class="small mute" translate="no">${esc(b.author)}</div>` : ''}<div class="bar" style="margin:10px 0 4px"><i style="width:${Math.round(done / b.parts * 100)}%"></i></div><div class="small mute">${done} из ${b.parts} прочитано</div></div>`; }).join('');
+  }
+  function bookPage(id) {
+    const m = BK.idx.find(x => x.id === id), d = BK.docs[id];
+    const head = `<div class="row"><button class="pill" data-act="bkback">‹ Книги</button></div><div class="tag" style="margin-top:14px">Книга</div><h1 style="font-size:24px" translate="no">${esc(m ? m.title : '')}</h1>${m && m.author ? `<p class="sub" translate="no">${esc(m.author)}</p>` : ''}`;
+    if (!d) { loadBook(id).then(r => { if (r && BK.open === id) render(); }); return head + '<div class="card"><p class="small mute" style="margin:0">Загрузка…</p></div>'; }
+    const next = d.parts.findIndex((_, i) => bpct(id, i) < 100), mn = p => Math.max(1, Math.round(p.blocks.reduce((n, x) => n + x[1].length, 0) / 1200));
+    return head + (next >= 0 ? `<button class="btn" data-act="readch" data-id="bk:${id}:${next}">${bpct(id, next) ? 'Продолжить' : 'Читать'} · ${next + 1}/${d.parts.length}</button>` : '<div class="card"><b>✓ Книга прочитана</b></div>') +
+      '<div class="card" style="padding:4px 14px">' + d.parts.map((p, i) => `<div class="goal chap" data-act="readch" data-id="bk:${id}:${i}" style="cursor:pointer;align-items:center"><div class="cn">${i + 1}</div><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3" translate="no">${esc(p.t)}</div><div class="small mute">${mn(p)} мин чтения${bpct(id, i) && bpct(id, i) < 100 ? ' · ' + bpct(id, i) + '%' : ''}</div></div><div class="chk" style="${bpct(id, i) === 100 ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${bpct(id, i) === 100 ? '✓' : ''}</div></div>`).join('') + '</div>';
+  }
   function listHtml() {
     const n = BOOK.filter(c => S.read[c.id]).length, sg = seg || (S.later.length ? 'later' : 'chapters'), cur = S.lastCh && chap(S.lastCh);
     let h = `<div class="tag">Книга</div><h1>Библиотека</h1><p class="sub">${BOOK.length} глав · прочитано ${n}</p>`;
     if (cur && !S.read[cur.id]) h += `<div class="card" data-act="readch" data-id="${cur.id}" style="cursor:pointer"><div class="tag">Продолжить чтение</div><div style="font-weight:600;margin-top:4px">${esc(cur.title)}</div>${S.pos[cur.id] ? `<div class="bar" style="margin:10px 0 0"><i style="width:${Math.round(S.pos[cur.id] * 100)}%"></i></div>` : ''}</div>`;
-    h += `<div class="seg wide"><button class="${sg === 'later' ? 'on' : ''}" data-act="bkseg" data-v="later">Позже (${S.later.length})</button><button class="${sg === 'chapters' ? 'on' : ''}" data-act="bkseg" data-v="chapters">Главы (${BOOK.length})</button></div>`;
+    h += `<div class="seg wide"><button class="${sg === 'later' ? 'on' : ''}" data-act="bkseg" data-v="later">Позже (${S.later.length})</button><button class="${sg === 'chapters' ? 'on' : ''}" data-act="bkseg" data-v="chapters">Главы (${BOOK.length})</button><button class="${sg === 'books' ? 'on' : ''}" data-act="bkseg" data-v="books">Книги${BK.idx && BK.idx.length ? ' (' + BK.idx.length + ')' : ''}</button></div>`;
+    if (sg === 'books') return h + booksPane();
     if (sg === 'later') {
       const rows = S.later.map(x => ({ x, i: info(x) })).filter(r => r.i);
       h += rows.length ? rows.map(({ x, i }) => `<div class="card lat"><div class="row sp"><span class="small mute">${i.ic} ${{ term: 'Термин', lc: 'Урок', q: 'Задача', card: 'Карточка' }[x.kind]}</span><button style="background:none;color:var(--mute);font-size:18px" data-act="laterdel" data-kind="${x.kind}" data-ref="${esc(x.ref)}">×</button></div>
@@ -78,13 +119,13 @@ const LIB = (() => {
     return h;
   }
   function readerHtml() {
-    const c = chap(ch), i = BOOK.indexOf(c), prev = BOOK[i - 1], next = BOOK[i + 1], serif = S.serif !== false;
+    const c = chap(ch), L = c.bk ? BK.lists[c.bid] : BOOK, i = L.indexOf(c), prev = L[i - 1], next = L[i + 1], serif = S.serif !== false;
     return `<div class="rbar"><i id="rp"></i></div>
     <div class="row sp"><button class="pill" data-act="readclose">‹ Книга</button><div class="row" style="gap:6px"><button class="pill" data-act="fsdown">A−</button><button class="pill" data-act="fsup">A+</button><button class="pill ${serif ? 'on' : ''}" data-act="fsserif">Aa</button></div></div>
-    <div class="book ${serif ? '' : 'sans'}" style="--fs:${S.fs || 17}px"><div class="tag" style="margin-top:18px">Глава ${i + 1} из ${BOOK.length} · ${esc(c.tag)}</div><h1 class="bt">${esc(c.title)}</h1><p class="small mute" style="margin:0 0 16px">${mins(c)} мин чтения</p>
-    ${c.intro ? `<p class="lead">${hl(c.intro)}</p>` : ''}${c.blocks.map(block).join('')}
+    <div class="book ${serif ? '' : 'sans'}" style="--fs:${S.fs || 17}px"><div class="tag" style="margin-top:18px">${c.bk ? 'Часть' : 'Глава'} ${i + 1} из ${L.length} · ${c.bk ? `<span translate="no">${esc(c.tag)}</span>` : esc(c.tag)}</div><h1 class="bt" ${c.bk ? 'translate="no"' : ''}>${esc(c.title)}</h1><p class="small mute" style="margin:0 0 16px">${mins(c)} мин чтения</p>
+    ${c.intro ? `<p class="lead">${hl(c.intro)}</p>` : ''}<div ${c.bk ? 'translate="no"' : ''}>${c.blocks.map(b => block(b, c.bk)).join('')}</div>
     <div class="bend"><button class="btn ${S.read[c.id] ? 'ghost' : ''}" data-act="readdone">${S.read[c.id] ? '✓ Глава прочитана' : 'Отметить прочитанной'}</button>
-    <div class="grid2" style="margin-top:10px">${prev ? `<button class="btn ghost" style="margin:0" data-act="readch" data-id="${prev.id}">‹ ${esc(prev.title.slice(0, 22))}</button>` : '<span></span>'}${next ? `<button class="btn ghost" style="margin:0" data-act="readch" data-id="${next.id}">${esc(next.title.slice(0, 22))} ›</button>` : '<span></span>'}</div></div></div>`;
+    <div class="grid2" style="margin-top:10px">${prev ? `<button class="btn ghost" style="margin:0" data-act="readch" data-id="${prev.id}">‹ ${c.bk ? 'Назад' : esc(prev.title.slice(0, 22))}</button>` : '<span></span>'}${next ? `<button class="btn ghost" style="margin:0" data-act="readch" data-id="${next.id}">${c.bk ? 'Дальше' : esc(next.title.slice(0, 22))} ›</button>` : '<span></span>'}</div></div></div>`;
   }
   function open(id) {
     if (!chap(id)) return;
@@ -105,8 +146,10 @@ const LIB = (() => {
       case 'readterm': open(D.a); return true;
       case 'later': { const on = toggle(D.kind, D.ref); toast(on ? 'Сохранено в «Книга → Позже»' : 'Убрано из «Позже»'); return true; }
       case 'laterdel': toggle(D.kind, D.ref); render(); return true;
-      case 'bkseg': seg = D.v; render(); return true;
+      case 'bkseg': seg = D.v; if (D.v === 'books') BK.tried = false; render(); return true;
       case 'readch': open(D.id); return true;
+      case 'bkopen': BK.open = D.id; render(); return true;
+      case 'bkback': BK.open = null; render(); return true;
       case 'readclose': ch = null; render(); window.scrollTo(0, 0); return true;
       case 'fsup': S.fs = Math.min(24, (S.fs || 17) + 1); save(); render(); return true;
       case 'fsdown': S.fs = Math.max(14, (S.fs || 17) - 1); save(); render(); return true;
@@ -143,5 +186,5 @@ const LIB = (() => {
   };
   const syncAll = () => { sync(); syncLessons(); syncDrills(); };
   syncAll();
-  return { sync: syncAll, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, reset: () => { ch = null; } };
+  return { sync: syncAll, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, reset: () => { ch = null; BK.open = null; } };
 })();
