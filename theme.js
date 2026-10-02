@@ -2,6 +2,7 @@
 // Темы оформления. Сами значения цветов лежат в index.html (:root[data-theme=...]); здесь только список для настроек и применение.
 const THEMES = {
   paper: { name: 'Светлая', bg: '#f5f3ee', ac: '#1b1d22', c: ['#c9531a', '#1f6fb2', '#26804f', '#7444c2'] },
+  mandate: { name: 'Mandate', bg: '#1b1d22', ac: '#e8854a', c: ['#e8854a', '#6fb7e8', '#8fd19e', '#c3a6f5'] },
   graphite: { name: 'Графит', bg: '#0e1013', ac: '#eceef2', c: ['#ff9a62', '#5ec8e5', '#6fdc9c', '#c39bff'] },
   emerald: { name: 'Изумруд', bg: '#0a1411', ac: '#3ecf8e', c: ['#ff8a7a', '#7cc4ff', '#b8a4ff', '#ff9ec7'] },
   bordeaux: { name: 'Бордо', bg: '#130a0d', ac: '#f0a8b4', c: ['#ffb089', '#5fd1c4', '#a6d98a', '#c0a6ff'] },
