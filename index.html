@@ -154,6 +154,18 @@ input[type=date]::-webkit-calendar-picker-indicator{opacity:.6}
 .chkrow{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:12px 0 0;line-height:1.4}
 .chkrow input{margin-top:2px;flex:none}
 .lb{margin:0 0 4px 2px}
+/* собеседование, follow-up, недельный отчёт */
+.gr{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.gr button{padding:14px 6px;border-radius:14px;border:1px solid var(--line);background:var(--soft);font-weight:600;font-size:14px;color:var(--text)}
+.gr .g0{border-color:var(--red);color:var(--red)}.gr .g1{border-color:var(--c-val);color:var(--c-val)}.gr .g2{border-color:var(--green);color:var(--green)}
+.gr button:active{transform:scale(.95)}
+.over{color:var(--red)}
+.tpl{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.tpl textarea{width:100%;margin:10px 0;background:var(--soft);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px;font-size:14px;line-height:1.5;font-family:inherit;resize:none}
+.seg{display:flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.seg button{padding:5px 12px;font-size:12px;font-weight:600;background:var(--soft);color:var(--text)}.seg button.on{background:var(--gold);color:var(--on)}
+.dl{display:block;font-size:12px;margin-top:2px;color:var(--mute)}.dl.up,.up{color:var(--green)}.dl.dn,.dn{color:var(--red)}
+.ring .fg{transition:stroke-dashoffset .3s linear}
 .offline{color:var(--red)}
 /* настройки */
 .themes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -227,6 +239,7 @@ html[data-anim=off] *,html[data-anim=off] *::before,html[data-anim=off] *::after
 <script src="trainer.js"></script>
 <script src="config.js"></script>
 <script src="sync.js"></script>
+<script src="features.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

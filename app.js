@@ -48,7 +48,7 @@ function streak() {
 }
 function addXp(n) { S.xp += n; today().xp += n; save(); }
 function level() { const l = Math.floor(S.xp / 200); return { n: l + 1, name: LEVELS[Math.min(l, LEVELS.length - 1)], into: S.xp % 200 }; }
-function toast(t) { const e = document.createElement('div'); e.className = 'toast'; e.textContent = t; document.body.append(e); setTimeout(() => e.remove(), 2200); }
+function toast(t) { document.querySelectorAll('.toast').forEach(x => x.remove()); const e = document.createElement('div'); e.className = 'toast'; e.textContent = t; document.body.append(e); setTimeout(() => e.remove(), 2200); }
 function complete(id, xp) {
   if (done(id)) return;
   today().steps.push(id); addXp(xp);
@@ -91,7 +91,9 @@ const appsToday = () => Object.values(S.apps).filter(o => o.s === 'applied' && o
 function setStatus(id, st) {
   const j = JOBS.jobs.find(x => x.id === id); if (!j) return;
   const was = jstat(j);
-  S.apps[id] = { s: st, base: j.status, ts: Date.now() };
+  const prev = S.apps[id] || {}, o = { ...prev, s: st, base: j.status, ts: Date.now() };
+  if (st === 'applied' && was !== 'applied') { o.ap = dkey(); delete o.fu; delete o.fn; delete o.sn; }
+  S.apps[id] = o;
   save();
   T.track('job', { id, st, was, cat: j.category, co: j.company, src: j.source, m: j.match });
   if (st === 'applied' && was !== 'applied') {
@@ -125,6 +127,7 @@ function jobsList() {
       ${j.lang ? `<p class="small"><b>Язык:</b> ${esc(j.lang)}</p>` : ''}${j.pay ? `<p class="small"><b>Оплата:</b> ${esc(j.pay)}</p>` : ''}${j.resume ? `<p class="small"><b>CV:</b> ${esc(j.resume)}</p>` : ''}
       <a class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin:8px 0" href="${esc(j.link)}" target="_blank" rel="noopener">Открыть вакансию ↗</a>
       ${reportBtn(j)}<button class="btn ghost" style="margin:0 0 8px" data-act="evjob" data-id="${j.id}">📅 Назначить тест или интервью</button>
+      ${st === 'applied' ? FX.fu.cardBlock(j) : ''}
       <div class="sts">${['applied', 'exam', 'rejected', 'new'].map(k => `<button class="st ${st === k ? 'on' : ''}" data-st="${k}" data-id="${j.id}">${k === 'new' ? 'Сбросить' : ST[k]}</button>`).join('')}</div></div>` : ''}</div>`;
   }).join('');
 }
@@ -141,7 +144,7 @@ views.jobs = () => {
 // ---------- навигация ----------
 let tab = 'today', sess = null, prevTab = 'today', lastKey = '', lastNav = '', booting = true, enterT = null;
 const TABS = [['today', 'Сегодня'], ['learn', 'Учёба'], ['jobs', 'Вакансии'], ['news', 'Новости'], ['goals', 'Прогресс']];
-function go(t) { if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
+function go(t) { FX.iv.stop(); if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
 let authErr = '';
 const RU_ERR = { 'Invalid login credentials': 'Неверный email или пароль', 'User already registered': 'Такой аккаунт уже есть, нажми «Войти»', 'Email not confirmed': 'Подтверди почту по письму, затем войди' };
 function authHtml() {
@@ -209,6 +212,7 @@ function render() {
   app.innerHTML = (sess || tab === 'settings' ? '' : `<button class="avatar" data-go="settings" aria-label="Профиль и настройки"${avStyle()}>${avInner()}</button>`) + (sess ? views[sess.type]() : views[tab]());
   if (!sess && tab === 'news') loadNews();
   if (!enter) app.classList.remove('enter'); else if (!booting && animOn()) enterView();
+  if (document.getElementById('weekbox')) FX.week.fill();
   T.onRender();
 }
 
@@ -228,6 +232,7 @@ views.today = () => {
   <div><h2 style="margin:0">План на сегодня</h2><p class="sub">${allDone() ? 'Готово. Увидимся завтра.' : 'Заверши три шага, чтобы продлить серию.'}</p></div></div>
   ${STEPS.map(s => `<div class="step ${done(s.id) ? 'done' : ''}" data-start="${s.id}"><div class="ic">${s.ic}</div><div><div class="t">${s.t}</div><div class="small mute">${s.d} · +${s.xp} XP</div></div><div class="chk">${done(s.id) ? '✓' : ''}</div></div>`).join('')}</div>
   ${evToday()}
+  ${FX.fu.html()}
   ${coachCard()}
   <div class="card" data-go="jobs" style="cursor:pointer"><div class="row sp"><div><div class="tag">Заявки сегодня</div><div style="font-size:17px;font-weight:600;margin-top:2px">${appsToday()} из ${DAILY_APPS}</div></div><div class="dots">${Array.from({ length: DAILY_APPS }, (_, i) => `<i class="${i < appsToday() ? 'on' : ''}"></i>`).join('')}</div></div>${appsToday() < DAILY_APPS ? `<p class="small mute" style="margin:8px 0 0">Ещё ${DAILY_APPS - appsToday()} — ${JOBS.jobs.filter(j => jstat(j) === 'new').length} вакансий ждут. Открыть →</p>` : '<p class="small" style="margin:8px 0 0;color:var(--green)">Норма выполнена</p>'}</div>
   ${goal ? `<div class="card"><div class="tag">Цель из роадмапа</div><p style="margin:6px 0 0;font-size:16px">${esc(goal.t)}</p></div>` : ''}
@@ -240,9 +245,11 @@ function coachCard() {
   if (!w) return '<div class="card"><div class="tag">Тренер</div><p style="margin:6px 0 0;line-height:1.5">Ответь на несколько задач, и я начну подбирать тренировки под твои слабые места.</p></div>';
   return `<div class="card"><div class="tag">Что подтянуть</div><div style="font-size:17px;font-weight:600;margin:4px 0">${TOPICS[w.k].name}: освоено ${w.k100}%</div><p class="small mute" style="margin:0">По ${w.n} ответам.${w.sp > 1.3 ? ' Ты в этой теме медленнее своей нормы.' : ''}</p><button class="btn ghost" data-start="drill-topic" data-topic="${w.k}">Тренировать 5 минут</button></div>`;
 }
+views.interview = () => FX.iv.html();
 views.learn = () => `
   <div class="tag">Учёба</div><h1>Концепции</h1><p class="sub">${S.lessons.length} из ${LESSONS.length} уроков пройдено · ${DRILLS.length} задач · ${CARDS.length} карточек</p>${S.lessons.length >= LESSONS.length ? '<div class="card banner"><b>Все уроки пройдены</b><p class="sub" style="color:var(--mute)">Дальше идёт повторение. Новые уроки добавим позже.</p></div>' : ''}
-  <div class="grid2" style="margin-top:14px"><button class="btn ghost" style="margin:0" data-start="drill-free">🧮 Задачи</button><button class="btn ghost" style="margin:0" data-start="cards">🃏 Интервью</button></div>
+  <div class="grid2" style="margin-top:14px"><button class="btn ghost" style="margin:0" data-start="drill-free">🧮 Задачи</button><button class="btn ghost" style="margin:0" data-start="cards">🃏 Карточки</button></div>
+  <button class="btn" style="margin-top:10px" data-start="interview">🎤 Режим собеседования</button>
   <div class="card"><div class="tag" style="margin-bottom:8px">Цветовая карта терминов</div><div class="legend">${Object.entries(CATS).map(([k, c]) => `<span class="k k-${k}">${c.ic} ${c.name}</span>`).join('')}</div><p class="small mute" style="margin:10px 0 0">Один цвет — одна группа понятий. Запоминай по цвету.</p></div>
   <div class="card" style="padding:6px 16px">${LESSONS.map(l => `<div class="goal" data-lesson="${l.id}" style="cursor:pointer;align-items:center;border-left:3px solid var(--c-${l.cat || LESSON_CAT[l.id] || 'val'});padding-left:12px"><div class="chk" style="${S.lessons.includes(l.id) ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${S.lessons.includes(l.id) ? '✓' : ''}</div><div><div class="tag">${l.tag}</div><div style="font-weight:600">${l.title}</div></div></div>`).join('')}</div>`;
 
@@ -345,7 +352,7 @@ function icsEvent(e) {
     'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:Завтра: ' + e.title, 'END:VALARM', 'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY', 'DESCRIPTION:Через час: ' + e.title, 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   location.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
 }
-const SEC = { today: 'Сегодня', learn: 'Учёба', lesson: 'Уроки', drill: 'Задачи', cards: 'Карточки', jobs: 'Вакансии', news: 'Новости', goals: 'Прогресс' };
+const SEC = { interview: 'Собеседование', today: 'Сегодня', learn: 'Учёба', lesson: 'Уроки', drill: 'Задачи', cards: 'Карточки', jobs: 'Вакансии', news: 'Новости', goals: 'Прогресс' };
 function insights() {
   const rows = T.topicRows(), rec = T.recurring(), bh = T.bestHour(), tw = Object.entries(T.timeByWeek()).sort((a, b) => b[1] - a[1]);
   const col = k => k < 0.4 ? 'var(--red)' : k < 0.7 ? 'var(--c-val)' : 'var(--green)';
@@ -362,6 +369,7 @@ views.goals = () => {
   const L = level();
   return `<div class="tag">Прогресс</div><h1>Мой путь в IB</h1><p class="sub">Phase 0: стажировка Big4 TS / M&amp;A, CFA L1, нетворкинг</p>
   <div class="grid2" style="margin-top:14px"><div class="stat"><span class="small mute">Серия</span><b data-count="${streak()}">${streak()}</b></div><div class="stat"><span class="small mute">Лучшая серия</span><b data-count="${Math.max(S.best, streak())}">${Math.max(S.best, streak())}</b></div><div class="stat"><span class="small mute">Всего XP</span><b data-count="${S.xp}">${S.xp}</b></div><div class="stat"><span class="small mute">Уровень</span><b style="font-size:19px">${L.name}</b></div></div>
+  ${FX.week.card()}
   ${eventsCard()}
   ${requestsCard()}
   ${insights()}
@@ -510,6 +518,7 @@ document.addEventListener('click', e => {
     if (D.start === 'drill-misc') return startDrill(false, null, D.code, 'Тренировка: ' + MISC[D.code].t);
     if (D.start === 'drill-event') { const e = S.events.find(x => x.id === D.id); return startDrill(false, e.topics, null, 'Подготовка: ' + e.title, e.id); }
     if (D.start === 'cards') return startCards();
+    if (D.start === 'interview') { sess = FX.iv.start(); render(); FX.iv.begin(); return; }
     if (D.start === 'news') return go('news');
   }
   const s = sess;
@@ -583,6 +592,7 @@ document.addEventListener('click', e => {
     }
     case 'clearlog': if (confirm('Удалить журнал событий? Статистика по темам останется.')) T.clearLog(); return;
     case 'reset': if (confirm('Удалить весь прогресс?')) { localStorage.removeItem(KEY); S = load(); save(); render(); } return;
+    default: if (FX.act(D.act, D)) return;
   }
 });
 
@@ -590,6 +600,7 @@ document.addEventListener('change', e => {
   const id = e.target.id;
   if (id === 'ev-job') { evDraft.jobId = e.target.value; const j = JOBS.jobs.find(x => x.id === evDraft.jobId); if (j) { evDraft.title = j.company + ': ' + j.title.slice(0, 40); evDraft.topics = evSuggest(j.id, evDraft.type); } render(); }
   else if (id === 'ev-type') { evDraft.type = e.target.value; if (evDraft.jobId) evDraft.topics = evSuggest(evDraft.jobId, evDraft.type); render(); }
+  else if (e.target.dataset.apdate) FX.fu.setApplied(e.target.dataset.apdate, e.target.value);
   else if (id === 'ev-prep') evDraft.prep = e.target.checked;
   else if (id === 'photo') { setPhoto(e.target.files[0]); e.target.value = ''; }
   else if (id === 'anim') { S.anim = e.target.checked; save(); applyAnim(); if (S.anim) toast('Анимации включены'); }
