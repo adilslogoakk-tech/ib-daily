@@ -26,7 +26,7 @@ let S = load();
 function normalize(s) {
   s = s || { xp: 0, days: {}, lessons: [], boxes: {}, miss: {}, goals: DEFAULT_GOALS, remind: '19:00', best: 0 };
   // значения по умолчанию для полей, добавленных позже (работает и для старых сохранений, и после сброса)
-  for (const [k, v] of Object.entries({ apps: {}, seen: [], items: {}, topics: {}, wrong: {}, focus: [], stats: {}, misc: {}, events: [], requests: [] })) s[k] = s[k] || v;
+  for (const [k, v] of Object.entries({ apps: {}, seen: [], items: {}, topics: {}, wrong: {}, focus: [], stats: {}, misc: {}, events: [], requests: [], reqDel: [] })) s[k] = s[k] || v;
   for (const k of ['hour', 'time', 'ms']) s.stats[k] = s.stats[k] || {};
   return s;
 }
@@ -216,6 +216,18 @@ const REQ_ST = { queued: 'В очереди', sent: 'Отправлено', done
 let RESULTS = (() => { try { return JSON.parse(localStorage.getItem('ibdaily.results')) || { items: [] }; } catch (e) { return { items: [] }; } })();
 const resFor = id => RESULTS.items.find(x => x.id === id);
 const reqStatus = r => resFor(r.id) ? 'done' : r.sent ? 'sent' : 'queued';
+// удаление запроса: локально сразу, в облаке с повтором, если сети нет
+function flushReqDel() {
+  if (!CLOUD.on || !S.reqDel.length) return;
+  const ids = S.reqDel.slice();
+  CLOUD.deleteRequests(ids).then(() => { S.reqDel = S.reqDel.filter(x => !ids.includes(x)); rawSave(); }).catch(() => {});
+}
+function dropRequests(test) {
+  const gone = S.requests.filter(test);
+  S.requests = S.requests.filter(r => !test(r));
+  gone.forEach(r => { if (r.sent) S.reqDel.push(r.id); });
+  flushReqDel();
+}
 function addRequest(type, j, ev) {
   const dup = S.requests.find(r => r.type === type && (type === 'report' ? r.company === j.company : r.eventId === ev.id));
   if (dup) return dup;
@@ -253,7 +265,7 @@ function planHtml(e) {
 function requestsCard() {
   if (!S.requests.length) return '';
   const pend = S.requests.filter(r => reqStatus(r) === 'queued').length;
-  return `<div class="card"><h2>Запросы к тренеру</h2>${S.requests.slice().reverse().map(r => { const st = reqStatus(r), res = resFor(r.id); return `<div class="goal" style="align-items:center"><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3">${REQ_TYPES[r.type]}</div><div class="small mute">${esc(r.company)}</div>${res && res.summary ? `<div class="small" style="margin-top:4px">${esc(res.summary)}</div>` : ''}</div><span class="pill">${REQ_ST[st]}</span>${res && res.pdf ? pdfLink(res.pdf, 'pill', 'PDF ↗') : ''}</div>`; }).join('')}
+  return `<div class="card"><h2>Запросы к тренеру</h2>${S.requests.slice().reverse().map(r => { const st = reqStatus(r), res = resFor(r.id); return `<div class="goal" style="align-items:center"><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3">${REQ_TYPES[r.type]}</div><div class="small mute">${esc(r.company)}</div>${res && res.summary ? `<div class="small" style="margin-top:4px">${esc(res.summary)}</div>` : ''}</div><span class="pill">${REQ_ST[st]}</span>${res && res.pdf ? pdfLink(res.pdf, 'pill', 'PDF ↗') : ''}<button data-act="reqdel" data-id="${r.id}" style="background:none;color:var(--mute);font-size:18px" title="Удалить запрос">×</button></div>`; }).join('')}
   ${pend ? `<p class="small mute" style="margin:10px 0 0;line-height:1.5">${CLOUD.on ? 'Запрос уйдёт в облако. Тренер обработает его, когда на компьютере запущена команда /ib-coach в Claude Code.' : 'Тренер читает запросы, когда ты передаёшь ему файл. Нажми кнопку, отправь файл на компьютер и запусти там команду /ib-coach в Claude Code.'}</p><button class="btn" data-act="sendreq">Отправить тренеру (${pend})</button>` : ''}</div>`;
 }
 function eventsCard() {
@@ -480,7 +492,8 @@ document.addEventListener('click', e => {
       return;
     }
     case 'evjob': { const j = JOBS.jobs.find(x => x.id === D.id); evDraft = { ...newDraft(), jobId: j.id, title: j.company + ': ' + j.title.slice(0, 40), topics: evSuggest(j.id, 'test') }; go('goals'); const f = $('#evform'); if (f) f.scrollIntoView(); return; }
-    case 'evdel': S.events = S.events.filter(x => x.id !== D.id); save(); return render();
+    case 'evdel': S.events = S.events.filter(x => x.id !== D.id); dropRequests(r => r.eventId === D.id); save(); return render();
+    case 'reqdel': dropRequests(r => r.id === D.id); save(); return render();
     case 'evics': return icsEvent(S.events.find(x => x.id === D.id));
     case 'evadd': {
       const d = evDraft, j = JOBS.jobs.find(x => x.id === d.jobId), title = (d.title || '').trim() || (j ? j.company : '');
@@ -513,7 +526,7 @@ document.addEventListener('input', e => {
 async function boot() {
   render();
   if (CLOUD.on) { try { if (await CLOUD.pull()) render(); } catch (e) {} }
-  loadJobs(); loadResults(); T.loadPersonal(); T.track('open', { tab }); CLOUD.flush();
+  loadJobs(); loadResults(); T.loadPersonal(); T.track('open', { tab }); CLOUD.flush(); flushReqDel();
 }
 boot();
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

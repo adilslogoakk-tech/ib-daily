@@ -74,6 +74,7 @@ const CLOUD = (() => {
     touch: () => { if (sess) { clearTimeout(timer); timer = setTimeout(push, 8000); } },
     flush: async () => { if (!sess) return; clearTimeout(timer); await push(); await flushLog(); },
     doc: async key => { const r = await getKv(key); return r ? r.value : null; },
+    deleteRequests: ids => api('DELETE', `/rest/v1/requests?id=in.(${ids.join(',')})`, undefined, { Prefer: 'return=minimal' }),
     sendRequests: rows => api('POST', '/rest/v1/requests?on_conflict=id', rows.map(r => ({ id: r.id, type: r.type, payload: r })), { Prefer: 'resolution=merge-duplicates,return=minimal' }),
     pdfUrl: async file => { const r = await api('POST', `/storage/v1/object/sign/reports/${sess.uid}/${encodeURIComponent(file)}`, { expiresIn: 3600 }); return cfg.url + '/storage/v1' + r.signedURL; },
   };
