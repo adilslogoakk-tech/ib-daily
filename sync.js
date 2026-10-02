@@ -49,7 +49,7 @@ const CLOUD = (() => {
     const row = await getKv('state');
     if (!row) { await push(); return false; }
     const ru = row.value._u || 0, lu = S._u || 0;
-    if (ru > lu) { S = normalize(row.value); rawSave(); info.at = Date.now(); info.err = ''; return true; }
+    if (ru > lu) { S = normalize(row.value); rawSave(); if (S.theme) applyTheme(S.theme); applyAnim(); info.at = Date.now(); info.err = ''; return true; }
     if (ru < lu) await push(); else info.at = Date.now();
     return false;
   }

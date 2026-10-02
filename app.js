@@ -53,7 +53,7 @@ function complete(id, xp) {
   if (done(id)) return;
   today().steps.push(id); addXp(xp);
   toast('+' + xp + ' XP');
-  if (allDone()) { addXp(25); S.best = Math.max(S.best, streak()); save(); setTimeout(() => toast('🔥 День закрыт! Серия: ' + streak()), 2300); }
+  if (allDone()) { addXp(25); S.best = Math.max(S.best, streak()); save(); setTimeout(celebrate, 150); setTimeout(() => toast('🔥 День закрыт! Серия: ' + streak()), 2300); }
   save();
 }
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -95,7 +95,7 @@ function setStatus(id, st) {
   save();
   T.track('job', { id, st, was, cat: j.category, co: j.company, src: j.source, m: j.match });
   if (st === 'applied' && was !== 'applied') {
-    addXp(15); const n = appsToday();
+    addXp(15); const n = appsToday(); if (n === DAILY_APPS) setTimeout(celebrate, 150);
     toast(n >= DAILY_APPS ? '🎯 Норма на сегодня: ' + n + '/' + DAILY_APPS : 'Заявка ' + n + '/' + DAILY_APPS + ' · +15 XP');
   }
 }
@@ -139,9 +139,9 @@ views.jobs = () => {
 };
 
 // ---------- навигация ----------
-let tab = 'today', sess = null;
+let tab = 'today', sess = null, prevTab = 'today', lastKey = '', lastNav = '', booting = true, enterT = null;
 const TABS = [['today', 'Сегодня'], ['learn', 'Учёба'], ['jobs', 'Вакансии'], ['news', 'Новости'], ['goals', 'Прогресс']];
-function go(t) { tab = t; sess = null; render(); window.scrollTo(0, 0); }
+function go(t) { if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
 let authErr = '';
 const RU_ERR = { 'Invalid login credentials': 'Неверный email или пароль', 'User already registered': 'Такой аккаунт уже есть, нажми «Войти»', 'Email not confirmed': 'Подтверди почту по письму, затем войди' };
 function authHtml() {
@@ -151,12 +151,50 @@ function authHtml() {
   <button class="btn" data-act="login">Войти</button><button class="btn ghost" data-act="signup">Создать аккаунт</button></div>
   <button class="btn ghost" data-act="localonly">Продолжить без облака</button>`;
 }
+// ---------- анимации ----------
+const animOn = () => S.anim !== false && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+const applyAnim = () => { document.documentElement.dataset.anim = S.anim === false ? 'off' : 'on'; };
+const initial = () => { const n = (S.name || CLOUD.email || '').trim(); return n ? n[0].toUpperCase() : '👤'; };
+function enterView() {
+  const app = $('#app'); app.classList.remove('enter'); void app.offsetWidth; app.classList.add('enter');
+  clearTimeout(enterT); enterT = setTimeout(() => app.classList.remove('enter'), 1400); countUp();
+}
+// числа плавно «набегают» при появлении экрана
+function countUp() {
+  document.querySelectorAll('[data-count]').forEach(el => {
+    const to = +el.dataset.count; if (!to) return;
+    const t0 = performance.now(), dur = 800;
+    const f = t => { const p = Math.min(1, (t - t0) / dur); el.textContent = Math.round(to * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(f); };
+    requestAnimationFrame(f);
+  });
+}
+function celebrate() {
+  if (!animOn()) return;
+  const cv = $('#fx'), ctx = cv.getContext('2d'), k = window.devicePixelRatio || 1, W = cv.width = innerWidth * k, H = cv.height = innerHeight * k;
+  const cs = getComputedStyle(document.documentElement), cols = ['--c-val', '--c-cap', '--c-prof', '--c-deal', '--gold'].map(n => cs.getPropertyValue(n).trim());
+  const P = Array.from({ length: 90 }, () => ({ x: W / 2 + (Math.random() - .5) * W * .3, y: H * .38, vx: (Math.random() - .5) * 16 * k, vy: (-9 - Math.random() * 11) * k, s: (6 + Math.random() * 7) * k, r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: cols[Math.random() * cols.length | 0] }));
+  const t0 = performance.now();
+  (function f(t) {
+    const e = t - t0; ctx.clearRect(0, 0, W, H);
+    P.forEach(p => { p.vy += .45 * k; p.x += p.vx; p.y += p.vy; p.r += p.vr; ctx.save(); ctx.globalAlpha = Math.max(0, 1 - e / 1900); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); });
+    if (e < 1900) requestAnimationFrame(f); else ctx.clearRect(0, 0, W, H);
+  })(t0);
+}
+function hideSplash() {
+  booting = false;
+  const sp = $('#splash'); if (sp) { sp.classList.add('hide'); setTimeout(() => sp.remove(), 700); }
+  if (animOn()) enterView();
+}
+
 function render() {
-  if (CLOUD.enabled && !CLOUD.on && !S.localOnly) { $('#nav').innerHTML = ''; $('#app').innerHTML = authHtml(); return; }
-  $('#nav').innerHTML = TABS.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-go="${k}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${l}</button>`).join('');
-  const v = sess ? views[sess.type]() : views[tab]();
-  $('#app').innerHTML = v;
+  if (CLOUD.enabled && !CLOUD.on && !S.localOnly) { $('#nav').innerHTML = ''; lastNav = ''; $('#app').innerHTML = authHtml(); return; }
+  if (lastNav !== tab) { $('#nav').innerHTML = TABS.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-go="${k}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${l}</button>`).join(''); lastNav = tab; }
+  const key = sess ? sess.type + ':' + (sess.type === 'lesson' ? (sess.i < sess.l.cards.length ? 'r' + sess.i : 'q' + sess.qi) : (sess.qi ?? sess.i ?? '')) : tab;
+  const enter = key !== lastKey; lastKey = key;
+  const app = $('#app');
+  app.innerHTML = (sess || tab === 'settings' ? '' : `<button class="avatar" data-go="settings" aria-label="Профиль и настройки">${esc(initial())}</button>`) + (sess ? views[sess.type]() : views[tab]());
   if (!sess && tab === 'news') loadNews();
+  if (!enter) app.classList.remove('enter'); else if (!booting && animOn()) enterView();
   T.onRender();
 }
 
@@ -170,9 +208,9 @@ views.today = () => {
   const late = (!allDone() || appsToday() < DAILY_APPS) && new Date().toTimeString().slice(0, 5) >= S.remind;
   return `
   <div class="row sp"><div><div class="tag">IB Daily</div><h1>${hello}${S.name ? ', ' + esc(S.name) : ''}</h1><p class="sub">15 минут в день — путь в Investment Banking</p></div></div>
-  <div class="row" style="margin-top:14px;gap:8px"><span class="pill">🔥 ${streak()} дн.</span><span class="pill gold">★ ${S.xp} XP</span><span class="pill">${L.name}</span></div>
-  ${late ? `<div class="card banner"><b>⏰ Время действовать</b><p class="sub" style="color:#6b6f78">${!allDone() ? `Шагов обучения: ${STEPS.length - n}. ` : ''}${appsToday() < DAILY_APPS ? `Заявок осталось: ${DAILY_APPS - appsToday()}.` : ''}</p></div>` : ''}
-  <div class="card"><div class="row"><div class="ring"><svg width="104" height="104" viewBox="0 0 104 104"><circle cx="52" cy="52" r="44" stroke="#ece8de" stroke-width="9" fill="none"/><circle cx="52" cy="52" r="44" stroke="url(#g)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/><defs><linearGradient id="g"><stop stop-color="#2c2f36"/><stop offset="1" stop-color="#1b1d22"/></linearGradient></defs></svg><div class="c"><b>${n}/${STEPS.length}</b></div></div>
+  <div class="row" style="margin-top:14px;gap:8px"><span class="pill"><span class="flame">🔥</span> <span data-count="${streak()}">${streak()}</span> дн.</span><span class="pill gold">★ <span data-count="${S.xp}">${S.xp}</span> XP</span><span class="pill">${L.name}</span></div>
+  ${late ? `<div class="card banner"><b>⏰ Время действовать</b><p class="sub" style="color:var(--mute)">${!allDone() ? `Шагов обучения: ${STEPS.length - n}. ` : ''}${appsToday() < DAILY_APPS ? `Заявок осталось: ${DAILY_APPS - appsToday()}.` : ''}</p></div>` : ''}
+  <div class="card"><div class="row"><div class="ring"><svg width="104" height="104" viewBox="0 0 104 104" style="--circ:${C}"><circle class="tr" cx="52" cy="52" r="44"/><circle class="fg" cx="52" cy="52" r="44" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/></svg><div class="c"><b>${n}/${STEPS.length}</b></div></div>
   <div><h2 style="margin:0">План на сегодня</h2><p class="sub">${allDone() ? 'Готово. Увидимся завтра.' : 'Заверши три шага, чтобы продлить серию.'}</p></div></div>
   ${STEPS.map(s => `<div class="step ${done(s.id) ? 'done' : ''}" data-start="${s.id}"><div class="ic">${s.ic}</div><div><div class="t">${s.t}</div><div class="small mute">${s.d} · +${s.xp} XP</div></div><div class="chk">${done(s.id) ? '✓' : ''}</div></div>`).join('')}</div>
   ${evToday()}
@@ -189,10 +227,10 @@ function coachCard() {
   return `<div class="card"><div class="tag">Что подтянуть</div><div style="font-size:17px;font-weight:600;margin:4px 0">${TOPICS[w.k].name}: освоено ${w.k100}%</div><p class="small mute" style="margin:0">По ${w.n} ответам.${w.sp > 1.3 ? ' Ты в этой теме медленнее своей нормы.' : ''}</p><button class="btn ghost" data-start="drill-topic" data-topic="${w.k}">Тренировать 5 минут</button></div>`;
 }
 views.learn = () => `
-  <div class="tag">Учёба</div><h1>Концепции</h1><p class="sub">${S.lessons.length} из ${LESSONS.length} уроков пройдено · ${DRILLS.length} задач · ${CARDS.length} карточек</p>${S.lessons.length >= LESSONS.length ? '<div class="card banner"><b>Все уроки пройдены</b><p class="sub" style="color:#6b6f78">Дальше идёт повторение. Новые уроки добавим позже.</p></div>' : ''}
+  <div class="tag">Учёба</div><h1>Концепции</h1><p class="sub">${S.lessons.length} из ${LESSONS.length} уроков пройдено · ${DRILLS.length} задач · ${CARDS.length} карточек</p>${S.lessons.length >= LESSONS.length ? '<div class="card banner"><b>Все уроки пройдены</b><p class="sub" style="color:var(--mute)">Дальше идёт повторение. Новые уроки добавим позже.</p></div>' : ''}
   <div class="grid2" style="margin-top:14px"><button class="btn ghost" style="margin:0" data-start="drill-free">🧮 Задачи</button><button class="btn ghost" style="margin:0" data-start="cards">🃏 Интервью</button></div>
   <div class="card"><div class="tag" style="margin-bottom:8px">Цветовая карта терминов</div><div class="legend">${Object.entries(CATS).map(([k, c]) => `<span class="k k-${k}">${c.ic} ${c.name}</span>`).join('')}</div><p class="small mute" style="margin:10px 0 0">Один цвет — одна группа понятий. Запоминай по цвету.</p></div>
-  <div class="card" style="padding:6px 16px">${LESSONS.map(l => `<div class="goal" data-lesson="${l.id}" style="cursor:pointer;align-items:center;border-left:3px solid var(--c-${l.cat || LESSON_CAT[l.id] || 'val'});padding-left:12px"><div class="chk" style="${S.lessons.includes(l.id) ? 'background:var(--green);border-color:var(--green);color:#fff' : ''}">${S.lessons.includes(l.id) ? '✓' : ''}</div><div><div class="tag">${l.tag}</div><div style="font-weight:600">${l.title}</div></div></div>`).join('')}</div>`;
+  <div class="card" style="padding:6px 16px">${LESSONS.map(l => `<div class="goal" data-lesson="${l.id}" style="cursor:pointer;align-items:center;border-left:3px solid var(--c-${l.cat || LESSON_CAT[l.id] || 'val'});padding-left:12px"><div class="chk" style="${S.lessons.includes(l.id) ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${S.lessons.includes(l.id) ? '✓' : ''}</div><div><div class="tag">${l.tag}</div><div style="font-weight:600">${l.title}</div></div></div>`).join('')}</div>`;
 
 views.news = () => `
   <div class="tag">Рынок</div><h1>Новости и данные</h1><p class="sub" id="newsmeta"></p>
@@ -285,7 +323,7 @@ function eventsCard() {
 function evToday() {
   const e = T.upcoming().find(x => T.daysLeft(x.date) <= 30); if (!e) return '';
   const n = T.daysLeft(e.date), { plan } = planFor(e), cur = plan && plan.steps.filter(s => s.d >= n).sort((a, b) => a.d - b.d)[0];
-  return `<div class="card banner"><div class="tag">Ближайшее событие</div><div style="font-size:17px;font-weight:600;margin:4px 0">${esc(e.title)}</div><p class="sub" style="color:#6b6f78;margin:0">${EV_TYPES[e.type] || ''} ${when(n)}. Фокус: ${e.topics.map(k => TOPICS[k].name).join(', ')}.</p>${cur ? `<p class="small" style="margin:6px 0 0"><b>По плану:</b> ${esc(cur.what)}</p>` : ''}<button class="btn ghost" data-start="drill-event" data-id="${e.id}">Подготовиться: 5 задач</button></div>`;
+  return `<div class="card banner"><div class="tag">Ближайшее событие</div><div style="font-size:17px;font-weight:600;margin:4px 0">${esc(e.title)}</div><p class="sub" style="color:var(--mute);margin:0">${EV_TYPES[e.type] || ''} ${when(n)}. Фокус: ${e.topics.map(k => TOPICS[k].name).join(', ')}.</p>${cur ? `<p class="small" style="margin:6px 0 0"><b>По плану:</b> ${esc(cur.what)}</p>` : ''}<button class="btn ghost" data-start="drill-event" data-id="${e.id}">Подготовиться: 5 задач</button></div>`;
 }
 function icsEvent(e) {
   const p = n => String(n).padStart(2, '0'), [h, m] = (e.time || '10:00').split(':'), dt = e.date.replace(/-/g, '') + 'T' + p(h) + p(m) + '00';
@@ -309,20 +347,36 @@ function insights() {
 views.goals = () => {
   const L = level();
   return `<div class="tag">Прогресс</div><h1>Мой путь в IB</h1><p class="sub">Phase 0: стажировка Big4 TS / M&amp;A, CFA L1, нетворкинг</p>
-  <div class="grid2" style="margin-top:14px"><div class="stat"><span class="small mute">Серия</span><b>${streak()}</b></div><div class="stat"><span class="small mute">Лучшая серия</span><b>${Math.max(S.best, streak())}</b></div><div class="stat"><span class="small mute">Всего XP</span><b>${S.xp}</b></div><div class="stat"><span class="small mute">Уровень</span><b style="font-size:19px">${L.name}</b></div></div>
+  <div class="grid2" style="margin-top:14px"><div class="stat"><span class="small mute">Серия</span><b data-count="${streak()}">${streak()}</b></div><div class="stat"><span class="small mute">Лучшая серия</span><b data-count="${Math.max(S.best, streak())}">${Math.max(S.best, streak())}</b></div><div class="stat"><span class="small mute">Всего XP</span><b data-count="${S.xp}">${S.xp}</b></div><div class="stat"><span class="small mute">Уровень</span><b style="font-size:19px">${L.name}</b></div></div>
   ${eventsCard()}
   ${requestsCard()}
   ${insights()}
   <div class="card"><h2>Чек-лист</h2>${S.goals.map(g => `<div class="goal ${g.done ? 'done' : ''}"><div class="chk" data-goal="${g.id}">${g.done ? '✓' : ''}</div><span style="flex:1">${esc(g.t)}</span><button data-del="${g.id}" style="background:none;color:var(--mute);font-size:18px">×</button></div>`).join('')}
   <div class="row" style="margin-top:12px"><input type="text" id="newgoal" placeholder="Новая цель"><button class="pill" data-act="addgoal" style="flex:none">Добавить</button></div></div>
+`;
+};
+
+views.settings = () => {
+  const L = level(), cur = S.theme || savedTheme() || 'paper';
+  const sw = t => t.id === 'auto' ? '<span class="sw auto"><i style="background:#8884"></i></span>' : `<span class="sw" style="background:${t.bg}"><i style="background:${t.ac}"></i>${t.c.map(c => `<b style="background:${c}"></b>`).join('')}</span>`;
+  const stat = (l, v, n) => `<div class="stat"><span class="small mute">${l}</span><b ${n ? `data-count="${v}"` : 'style="font-size:17px"'}>${v}</b></div>`;
+  return `<div class="row"><button class="pill" data-act="back">‹ Назад</button></div>
+  <div class="tag" style="margin-top:14px">Профиль</div><h1>Настройки</h1>
+  <div class="card"><div class="row"><div class="avatar big">${esc(initial())}</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:17px">${esc(S.name || 'Без имени')}</div><div class="small mute">${CLOUD.on ? esc(CLOUD.email) : 'Данные только на этом телефоне'}</div></div></div>
+  <input type="text" id="nm" placeholder="Как к тебе обращаться" value="${esc(S.name || '')}" style="margin-top:12px">
+  <div class="grid2" style="margin-top:12px">${stat('Уровень', L.name)}${stat('Опыт', S.xp, 1)}${stat('Серия', streak(), 1)}${stat('Лучшая серия', Math.max(S.best, streak()), 1)}</div></div>
+  <div class="card"><h2>Тема оформления</h2><div class="themes">${THEME_LIST.map(t => `<button class="theme ${cur === t.id ? 'on' : ''}" data-th="${t.id}">${sw(t)}${t.name}</button>`).join('')}</div>
+  <p class="small mute" style="margin:10px 0 0;line-height:1.5">«Авто» следует за темой iPhone. На тёмных темах верхняя полоска iOS с часами остаётся светлой: это ограничение системы для приложений на главном экране.</p></div>
+  <div class="card"><label class="switch"><div><b>Анимации</b><div class="small mute">Переходы, заставка, конфетти</div></div><input type="checkbox" class="tg" id="anim" ${S.anim === false ? '' : 'checked'}></label></div>
   <div class="card"><h2>Напоминание</h2><p class="sub" style="margin-bottom:10px">Добавь ежедневное напоминание в Календарь iPhone. Оно будет приходить даже когда приложение закрыто.</p>
   <input type="time" id="rt" value="${S.remind}"><button class="btn" data-act="ics">📅 Добавить в Календарь</button></div>
-  <div class="card"><h2>Данные</h2><p class="small mute" style="line-height:1.5;margin:0 0 4px">Записывается: время и результат каждого ответа, выбранный вариант, время в разделах, статусы заявок. Всё хранится только на этом телефоне. Никуда не отправляется, пока ты сам не нажмёшь «Выгрузить».</p>
-<p class="small" style="margin:10px 0 6px"><b>${CLOUD.on ? 'Облако: ' + esc(CLOUD.email) : CLOUD.enabled ? 'Облако отключено' : 'Облако не настроено'}</b>${CLOUD.on ? ' · ' + (CLOUD.info.err ? '<span style="color:var(--red)">ошибка синхронизации</span>' : CLOUD.info.at ? 'синхронизировано ' + new Date(CLOUD.info.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : 'ожидание') : ''}</p>
-  <input type="text" id="nm" placeholder="Как к тебе обращаться" value="${esc(S.name || '')}">
+  <div class="card"><h2>Облако и данные</h2>
+  <p class="small" style="margin:0 0 6px"><b>${CLOUD.on ? 'Облако: ' + esc(CLOUD.email) : CLOUD.enabled ? 'Облако отключено' : 'Облако не настроено'}</b>${CLOUD.on ? ' · ' + (CLOUD.info.err ? '<span style="color:var(--red)">ошибка синхронизации</span>' : CLOUD.info.at ? 'синхронизировано ' + new Date(CLOUD.info.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : 'ожидание') : ''}</p>
   ${CLOUD.on ? '<button class="btn ghost" data-act="syncnow">Синхронизировать сейчас</button><button class="btn ghost" data-act="logout">Выйти из облака</button>' : CLOUD.enabled ? '<button class="btn ghost" data-act="gologin">Войти в облако</button>' : ''}
-  <button class="btn ghost" data-act="export">Выгрузить данные для тренера</button><button class="btn ghost" data-act="clearlog">Удалить журнал событий</button></div>
-  <button class="btn ghost" data-act="reset" style="margin-bottom:20px">Сбросить прогресс</button>`;
+  <button class="btn ghost" data-act="export">Выгрузить данные для тренера</button><button class="btn ghost" data-act="clearlog">Удалить журнал событий</button>
+  <p class="small mute" style="line-height:1.5;margin:12px 0 0">Записывается: время и результат каждого ответа, выбранный вариант, время в разделах, статусы заявок. Данные хранятся на телефоне и в твоём облаке и больше нигде.</p></div>
+  <button class="btn ghost" data-act="reset" style="margin-bottom:12px">Сбросить прогресс</button>
+  <p class="small mute" style="text-align:center;margin-bottom:24px">IB Daily</p>`;
 };
 
 // ---------- сессии ----------
@@ -377,7 +431,7 @@ views.cards = () => {
   const s = sess, head = `<div class="row sp"><button class="pill" data-act="exit">✕</button><span class="small mute">Карточка ${Math.min(s.i + 1, s.q.length)} из ${s.q.length}</span></div><div class="bar" style="margin-top:14px"><i style="width:${s.i / s.q.length * 100}%"></i></div>`;
   if (s.i >= s.q.length) return head + `<div class="card" style="text-align:center"><h2>Серия окончена</h2><p class="sub">Карточки с ошибками вернутся раньше.</p></div><button class="btn" data-act="exit">Готово</button>`;
   const c = s.q[s.i];
-  return head + `<div class="card flash"><div class="in" data-act="flip">${s.flip ? hl(c.a) : '<div><div class="tag" style="margin-bottom:10px">' + esc(s.why[s.i]) + '</div>' + hl(c.q) + '<div class="small mute" style="margin-top:14px;font-family:var(--sans)">нажми, чтобы увидеть ответ</div></div>'}</div></div>
+  return head + `<div class="card flash"><div class="in ${s.flip ? 'flip' : ''}" data-act="flip">${s.flip ? hl(c.a) : '<div><div class="tag" style="margin-bottom:10px">' + esc(s.why[s.i]) + '</div>' + hl(c.q) + '<div class="small mute" style="margin-top:14px;font-family:var(--sans)">нажми, чтобы увидеть ответ</div></div>'}</div></div>
   ${s.flip ? `<div class="grid2"><button class="btn ghost" data-act="cno">Повторить</button><button class="btn" data-act="cyes">Знал(а)</button></div>` : ''}`;
 };
 
@@ -419,9 +473,10 @@ function icsReminder() {
 
 // ---------- события ----------
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-go],[data-start],[data-lesson],[data-act],[data-goal],[data-del],[data-read],[data-job],[data-st],[data-filter],[data-focus],[data-evtopic]'); if (!t) return;
+  const t = e.target.closest('[data-go],[data-start],[data-lesson],[data-act],[data-goal],[data-del],[data-read],[data-job],[data-st],[data-filter],[data-focus],[data-evtopic],[data-th]'); if (!t) return;
   const D = t.dataset;
   if (D.go) return go(D.go);
+  if (D.th) { S.theme = D.th; save(); applyTheme(D.th, animOn()); return render(); }
   if (D.job) { jobOpen = jobOpen === D.job ? null : D.job; return render(); }
   if (D.st) { setStatus(D.id, D.st); return render(); }
   if (D.filter) { jobFilter = D.filter; jobOpen = null; return render(); }
@@ -459,6 +514,7 @@ document.addEventListener('click', e => {
     case 'addgoal': { const i = $('#newgoal'); if (i.value.trim()) { S.goals.push({ id: 'g' + Date.now(), t: i.value.trim(), done: false }); save(); render(); } return; }
     case 'ics': return icsReminder();
     case 'export': return T.exportData();
+    case 'back': return go(prevTab);
     case 'login': case 'signup': {
       const em = ($('#au-email').value || '').trim(), pw = $('#au-pass').value || '';
       authErr = '';
@@ -517,6 +573,7 @@ document.addEventListener('change', e => {
   if (id === 'ev-job') { evDraft.jobId = e.target.value; const j = JOBS.jobs.find(x => x.id === evDraft.jobId); if (j) { evDraft.title = j.company + ': ' + j.title.slice(0, 40); evDraft.topics = evSuggest(j.id, evDraft.type); } render(); }
   else if (id === 'ev-type') { evDraft.type = e.target.value; if (evDraft.jobId) evDraft.topics = evSuggest(evDraft.jobId, evDraft.type); render(); }
   else if (id === 'ev-prep') evDraft.prep = e.target.checked;
+  else if (id === 'anim') { S.anim = e.target.checked; save(); applyAnim(); if (S.anim) toast('Анимации включены'); }
   else if (id === 'ev-date') evDraft.date = e.target.value;
   else if (id === 'ev-time') evDraft.time = e.target.value;
 });
@@ -528,7 +585,10 @@ async function boot() {
   if (CLOUD.on) { try { if (await CLOUD.pull()) render(); } catch (e) {} }
   loadJobs(); loadResults(); T.loadPersonal(); T.track('open', { tab }); CLOUD.flush(); flushReqDel();
 }
+applyAnim();
+if (S.theme && S.theme !== savedTheme()) applyTheme(S.theme);
 boot();
+setTimeout(hideSplash, animOn() ? 1000 : 0);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) CLOUD.flush();
