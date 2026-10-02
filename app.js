@@ -49,7 +49,7 @@ function streak() {
 }
 function addXp(n) { S.xp += n; today().xp += n; save(); }
 function level() { const l = Math.floor(S.xp / 200); return { n: l + 1, name: LEVELS[Math.min(l, LEVELS.length - 1)], into: S.xp % 200 }; }
-function toast(t) { document.querySelectorAll('.toast').forEach(x => x.remove()); const e = document.createElement('div'); e.className = 'toast'; e.textContent = t; document.body.append(e); setTimeout(() => e.remove(), 2200); }
+function toast(t) { document.querySelectorAll('.toast').forEach(x => x.remove()); const e = document.createElement('div'); e.className = 'toast'; e.textContent = tr(t); document.body.append(e); setTimeout(() => e.remove(), 2200); }
 function complete(id, xp) {
   if (done(id)) return;
   today().steps.push(id); addXp(xp);
@@ -140,7 +140,7 @@ function jobsList() {
 views.jobs = () => {
   const cnt = {}; JOBS.jobs.forEach(j => { const k = jstat(j); cnt[k] = (cnt[k] || 0) + 1; });
   const n = appsToday();
-  return `<div class="tag">Вакансии</div><h1>Мои заявки</h1><p class="sub">${JOBS.jobs.length ? 'Обновлено ' + new Date(JOBS.updated).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Данные ещё не загружены'}</p>
+  return `<div class="tag">Вакансии</div><h1>Мои заявки</h1><p class="sub">${JOBS.jobs.length ? 'Обновлено ' + new Date(JOBS.updated).toLocaleString(I18N.loc, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Данные ещё не загружены'}</p>
   <div class="card"><div class="row sp"><b>Сегодня подано</b><span class="pill">${Math.min(n, 99)} из ${DAILY_APPS}</span></div><div class="bar" style="margin:10px 0 0"><i style="width:${Math.min(100, n / DAILY_APPS * 100)}%"></i></div></div>
   <input type="text" id="jq" placeholder="Поиск по названию или компании" value="${esc(jobQuery)}">
   <div class="chips">${Object.keys(ST).map(k => `<button class="chip ${jobFilter === k ? 'on' : ''}" data-filter="${k}">${ST[k]} <b>${cnt[k] || 0}</b></button>`).join('')}</div>
@@ -338,7 +338,7 @@ function eventsCard() {
   const list = T.upcoming(), d = evDraft;
   const jobs = JOBS.jobs.filter(j => ['applied', 'exam'].includes(jstat(j))).sort((a, b) => a.company.localeCompare(b.company));
   return `<div class="card" id="evform"><h2>Тесты, интервью, экзамены</h2>
-  ${list.length ? list.map(e => { const n = T.daysLeft(e.date); return `<div class="goal" style="align-items:center"><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3">${esc(e.title)}</div><div class="small mute">${EV_TYPES[e.type] || ''} · ${new Date(e.date + 'T00:00:00').toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })} · <b style="color:${n <= 3 ? 'var(--c-val)' : 'inherit'}">${when(n)}</b></div><div class="small mute">${e.topics.map(k => TOPICS[k].name).join(', ')}</div>${planHtml(e)}</div><button class="pill" data-act="evics" data-id="${e.id}" title="В календарь">📅</button><button data-act="evdel" data-id="${e.id}" style="background:none;color:var(--mute);font-size:18px">×</button></div>`; }).join('') : '<p class="small mute" style="margin:0 0 8px">Событий пока нет. Добавь дату, и за 3 недели до неё темы подготовки получат приоритет в твоих тренировках.</p>'}
+  ${list.length ? list.map(e => { const n = T.daysLeft(e.date); return `<div class="goal" style="align-items:center"><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3">${esc(e.title)}</div><div class="small mute">${EV_TYPES[e.type] || ''} · ${new Date(e.date + 'T00:00:00').toLocaleDateString(I18N.loc, { day: 'numeric', month: 'long' })} · <b style="color:${n <= 3 ? 'var(--c-val)' : 'inherit'}">${when(n)}</b></div><div class="small mute">${e.topics.map(k => TOPICS[k].name).join(', ')}</div>${planHtml(e)}</div><button class="pill" data-act="evics" data-id="${e.id}" title="В календарь">📅</button><button data-act="evdel" data-id="${e.id}" style="background:none;color:var(--mute);font-size:18px">×</button></div>`; }).join('') : '<p class="small mute" style="margin:0 0 8px">Событий пока нет. Добавь дату, и за 3 недели до неё темы подготовки получат приоритет в твоих тренировках.</p>'}
   <div style="margin-top:14px"><div class="tag" style="margin-bottom:6px">Добавить</div>
   <select id="ev-job"><option value="">Без привязки к вакансии</option>${jobs.map(j => `<option value="${j.id}" ${d.jobId === j.id ? 'selected' : ''}>${esc(j.company)}: ${esc(j.title.slice(0, 40))}</option>`).join('')}</select>
   <input type="text" id="ev-title" placeholder="Название (например, тест PHOENIX)" value="${esc(d.title)}" style="margin-top:8px">
@@ -396,13 +396,14 @@ views.settings = () => {
   <div class="row" style="margin-top:12px;gap:8px"><button class="pill" data-act="photopick">📷 ${S.photo ? 'Изменить фото' : 'Добавить фото'}</button>${S.photo ? '<button class="pill" data-act="photodel">Удалить фото</button>' : ''}</div>
   <input type="text" id="nm" placeholder="Как к тебе обращаться" value="${esc(S.name || '')}" style="margin-top:12px">
   <div class="grid2" style="margin-top:12px">${stat('Уровень', L.name)}${stat('Опыт', S.xp, 1)}${stat('Серия', streak(), 1)}${stat('Лучшая серия', Math.max(S.best, streak()), 1)}</div></div>
+  <div class="card"><h2>Язык интерфейса</h2><div class="seg">${I18N.list.map(l => `<button class="${I18N.lang === l ? 'on' : ''}" data-lang="${l}" translate="no">${I18N.names[l]}</button>`).join('')}</div><p class="small mute" style="margin:10px 0 0;line-height:1.5">Переводится интерфейс. Уроки, задачи, глоссарий и книга пока на русском.</p></div>
   <div class="card"><h2>Тема оформления</h2><div class="themes">${THEME_LIST.map(t => `<button class="theme ${cur === t.id ? 'on' : ''}" data-th="${t.id}">${sw(t)}${t.name}</button>`).join('')}</div>
-  <p class="small mute" style="margin:10px 0 0;line-height:1.5">«Авто» следует за темой iPhone. На тёмных темах верхняя полоска iOS с часами остаётся светлой: это ограничение системы для приложений на главном экране.</p></div>
+  <p class="small mute" style="margin:10px 0 0;line-height:1.5">«Авто» следует за темой iPhone.</p></div>
   <div class="card"><label class="switch"><div><b>Анимации</b><div class="small mute">Переходы, заставка, конфетти</div></div><input type="checkbox" class="tg" id="anim" ${S.anim === false ? '' : 'checked'}></label></div>
   <div class="card"><h2>Напоминание</h2><p class="sub" style="margin-bottom:10px">Добавь ежедневное напоминание в Календарь iPhone. Оно будет приходить даже когда приложение закрыто.</p>
   <input type="time" id="rt" value="${S.remind}"><button class="btn" data-act="ics">📅 Добавить в Календарь</button></div>
   <div class="card"><h2>Облако и данные</h2>
-  <p class="small" style="margin:0 0 6px"><b>${CLOUD.on ? 'Облако: ' + esc(CLOUD.email) : CLOUD.enabled ? 'Облако отключено' : 'Облако не настроено'}</b>${CLOUD.on ? ' · ' + (CLOUD.info.err ? '<span style="color:var(--red)">ошибка синхронизации</span>' : CLOUD.info.at ? 'синхронизировано ' + new Date(CLOUD.info.at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }) : 'ожидание') : ''}</p>
+  <p class="small" style="margin:0 0 6px"><b>${CLOUD.on ? 'Облако: ' + esc(CLOUD.email) : CLOUD.enabled ? 'Облако отключено' : 'Облако не настроено'}</b>${CLOUD.on ? ' · ' + (CLOUD.info.err ? '<span style="color:var(--red)">ошибка синхронизации</span>' : CLOUD.info.at ? 'синхронизировано ' + new Date(CLOUD.info.at).toLocaleTimeString(I18N.loc, { hour: '2-digit', minute: '2-digit' }) : 'ожидание') : ''}</p>
   ${CLOUD.on ? '<button class="btn ghost" data-act="syncnow">Синхронизировать сейчас</button><button class="btn ghost" data-act="logout">Выйти из облака</button>' : CLOUD.enabled ? '<button class="btn ghost" data-act="gologin">Войти в облако</button>' : ''}
   <button class="btn ghost" data-act="export">Выгрузить данные для тренера</button><button class="btn ghost" data-act="clearlog">Удалить журнал событий</button>
   <p class="small mute" style="line-height:1.5;margin:12px 0 0">Записывается: время и результат каждого ответа, выбранный вариант, время в разделах, статусы заявок. Данные хранятся на телефоне и в твоём облаке и больше нигде.</p></div>
@@ -472,8 +473,8 @@ async function loadNews() {
   const cached = JSON.parse(localStorage.getItem('ibdaily.news') || 'null');
   const showNews = c => {
     if (!list) return;
-    list.innerHTML = c.items.map(a => `<a class="news" href="${esc(a.link)}" target="_blank" rel="noopener" data-read="1"><span class="small mute">${esc(a.src)} · ${new Date(a.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</span><b>${esc(a.title)}</b></a>`).join('') || '<span class="small mute">Нет данных</span>';
-    meta.innerHTML = 'Обновлено ' + new Date(c.ts).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    list.innerHTML = c.items.map(a => `<a class="news" href="${esc(a.link)}" target="_blank" rel="noopener" data-read="1"><span class="small mute">${esc(a.src)} · ${new Date(a.date).toLocaleDateString(I18N.loc, { day: 'numeric', month: 'short' })}</span><b>${esc(a.title)}</b></a>`).join('') || '<span class="small mute">Нет данных</span>';
+    meta.innerHTML = 'Обновлено ' + new Date(c.ts).toLocaleTimeString(I18N.loc, { hour: '2-digit', minute: '2-digit' });
   };
   if (cached) showNews(cached);
   try {
@@ -506,9 +507,10 @@ function icsReminder() {
 document.addEventListener('click', e => {
   const tk = e.target.closest('.k[data-term]');
   if (tk && !(tk.closest('.opt') && sess && sess.picked == null && sess.pend == null)) { LIB.openTerm(tk.dataset.term); return; }
-  const t = e.target.closest('[data-go],[data-start],[data-lesson],[data-act],[data-goal],[data-del],[data-read],[data-job],[data-st],[data-filter],[data-focus],[data-evtopic],[data-th]'); if (!t) return;
+  const t = e.target.closest('[data-go],[data-start],[data-lesson],[data-act],[data-goal],[data-del],[data-read],[data-job],[data-st],[data-filter],[data-focus],[data-evtopic],[data-th],[data-lang]'); if (!t) return;
   const D = t.dataset;
   if (D.go) { if (D.go === 'book' && tab === 'book') LIB.reset(); return go(D.go); }
+  if (D.lang) { S.lang = D.lang; save(); I18N.set(D.lang); return render(); }
   if (D.th) { S.theme = D.th; save(); applyTheme(D.th, animOn()); return render(); }
   if (D.job) { jobOpen = jobOpen === D.job ? null : D.job; return render(); }
   if (D.st) { setStatus(D.id, D.st); return render(); }
@@ -599,8 +601,8 @@ document.addEventListener('click', e => {
       evDraft = newDraft();
       toast('Добавлено: ' + title + (j && jstat(j) === 'exam' ? ' · статус вакансии: тест / интервью' : '')); return render();
     }
-    case 'clearlog': if (confirm('Удалить журнал событий? Статистика по темам останется.')) T.clearLog(); return;
-    case 'reset': if (confirm('Удалить весь прогресс?')) { localStorage.removeItem(KEY); S = load(); save(); render(); } return;
+    case 'clearlog': if (confirm(tr('Удалить журнал событий? Статистика по темам останется.'))) T.clearLog(); return;
+    case 'reset': if (confirm(tr('Удалить весь прогресс?'))) { localStorage.removeItem(KEY); S = load(); save(); render(); } return;
     default: if (FX.act(D.act, D) || LIB.act(D.act, D)) return;
   }
 });
@@ -620,6 +622,7 @@ document.addEventListener('input', e => {
   if (e.target.id === 'nm') { S.name = e.target.value; save(); }
   if (e.target.id === 'ev-title') evDraft.title = e.target.value; if (e.target.id === 'jq') { jobQuery = e.target.value; $('#joblist').innerHTML = jobsList(); } });
 async function boot() {
+  if (S.lang && S.lang !== I18N.lang) I18N.set(S.lang);
   render();
   if (CLOUD.on) { try { if (await CLOUD.pull()) render(); } catch (e) {} }
   loadJobs(); loadResults(); T.loadPersonal(); T.track('open', { tab }); CLOUD.flush(); flushReqDel();
