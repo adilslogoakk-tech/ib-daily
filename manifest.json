@@ -1,0 +1,14 @@
+{
+  "name": "IB Daily",
+  "short_name": "IB Daily",
+  "description": "15 минут в день к карьере в Investment Banking",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f3ee",
+  "theme_color": "#f5f3ee",
+  "icons": [
+    { "src": "icon-180.png", "sizes": "180x180", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

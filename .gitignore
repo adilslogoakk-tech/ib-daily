@@ -1,0 +1,10 @@
+# Публикуется только код приложения. Личные данные живут в облаке, не в репозитории.
+jobs.json
+results.json
+personal.json
+reports/
+inbox/
+coach/
+sync_jobs.py
+.claude/
+*.bak
