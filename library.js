@@ -145,7 +145,12 @@ const LIB = (() => {
       case 'sheetclose': closeSheet(); return true;
       case 'readterm': open(D.a); return true;
       case 'later': { const on = toggle(D.kind, D.ref); toast(on ? 'Сохранено в «Книга → Позже»' : 'Убрано из «Позже»'); return true; }
-      case 'laterdel': toggle(D.kind, D.ref); render(); return true;
+      case 'laterdel': {
+        const el = document.querySelector(`[data-act=laterdel][data-ref="${CSS.escape(D.ref)}"]`), card = el && el.closest('.card');
+        toggle(D.kind, D.ref);
+        if (card && animOn()) { card.classList.add('out'); setTimeout(render, 280); } else render();
+        return true;
+      }
       case 'bkseg': seg = D.v; if (D.v === 'books') BK.tried = false; render(); return true;
       case 'readch': open(D.id); return true;
       case 'bkopen': BK.open = D.id; render(); return true;
@@ -186,5 +191,5 @@ const LIB = (() => {
   };
   const syncAll = () => { sync(); syncLessons(); syncDrills(); };
   syncAll();
-  return { sync: syncAll, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, reset: () => { ch = null; BK.open = null; } };
+  return { sync: syncAll, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, sub: () => (seg || '') + ':' + (BK.open || ''), reset: () => { ch = null; BK.open = null; } };
 })();

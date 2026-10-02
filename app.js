@@ -148,7 +148,7 @@ views.jobs = () => {
 };
 
 // ---------- навигация ----------
-let tab = 'today', jobsFrom = 'goals', sess = null, prevTab = 'today', lastKey = '', lastNav = '', booting = true, enterT = null;
+let tab = 'today', jobsFrom = 'goals', sess = null, prevTab = 'today', lastKey = '', lastNav = '', lastSub = '', subT = null, booting = true, enterT = null;
 const TABS = [['today', 'Сегодня'], ['learn', 'Учёба'], ['book', 'Книга'], ['news', 'Новости'], ['goals', 'Прогресс']];
 function go(t) { if (t === 'jobs' && tab !== 'jobs') jobsFrom = tab === 'jobs' ? 'goals' : tab; FX.iv.stop(); LIB.closeSheet(); if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
 let authErr = '';
@@ -218,6 +218,10 @@ function render() {
   app.innerHTML = (sess || tab === 'settings' || (tab === 'book' && LIB.cur()) ? '' : `<button class="avatar" data-go="settings" aria-label="Профиль и настройки"${avStyle()}>${avInner()}</button>`) + (sess ? views[sess.type]() : views[tab]());
   if (!sess && tab === 'news') loadNews();
   if (!enter) app.classList.remove('enter'); else if (!booting && animOn()) enterView();
+  // переключение внутри экрана (Позже / Главы / Книги, язык): плавно показываем только содержимое под переключателем
+  const sub = (tab === 'book' ? LIB.sub() : '') + '|' + I18N.lang;
+  if (!enter && sub !== lastSub && !booting && animOn()) { app.classList.remove('sub'); void app.offsetWidth; app.classList.add('sub'); clearTimeout(subT); subT = setTimeout(() => app.classList.remove('sub'), 900); }
+  lastSub = sub;
   if (document.getElementById('weekbox')) FX.week.fill();
   T.onRender();
 }
