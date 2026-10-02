@@ -5,7 +5,9 @@ const LIB = (() => {
   const GL = {}, STEMS = [];
   GLOSS.forEach(g => g.m.forEach(m => { const l = m.toLowerCase(); GL[l] = g; if (/[а-я]/i.test(l)) STEMS.push([l, g]); }));
   const find = low => GL[low] || (STEMS.find(([s]) => low.startsWith(s)) || [])[1];
-  const byKey = k => { const g = GLOSS.find(x => x.k === k), e = g && I18N.lang === 'en' && typeof GLOSS_EN !== 'undefined' && GLOSS_EN[k]; return e ? { ...g, t: e[0], d: e[1], f: e[2] || undefined } : g; };
+  // языковые пакеты контента: window.GLOSS_EN / BOOK_DE / LESSONS_AZ ... (русский оригинал остаётся запасным вариантом)
+  const pk = n => window[n + '_' + I18N.lang.toUpperCase()];
+  const byKey = k => { const g = GLOSS.find(x => x.k === k), t = pk('GLOSS'), e = g && t && t[k]; return e ? { ...g, t: e[0], d: e[1], f: e[2] || undefined } : g; };
   const chap = id => BOOK.find(c => c.id === id);
   const TOPIC_CH = { acct: 'statements', ev: 'ev', mult: 'mult', dcf: 'dcf', wacc: 'wacc', tvm: 'tvm', comps: 'comps', dilution: 'dilution', ma: 'ma', lbo: 'lbo', credit: 'debt', markets: 'ecm', career: 'interview' };
   const flat = b => b.slice(1).flat(2).filter(x => typeof x === 'string').join(' ');
@@ -119,24 +121,25 @@ const LIB = (() => {
   // английская версия глав (BOOK_EN) подменяет поля главы на месте; русский оригинал хранится в c.ru
   const sync = () => BOOK.forEach(c => {
     if (!c.ru) c.ru = { title: c.title, tag: c.tag, intro: c.intro, blocks: c.blocks };
-    const e = I18N.lang === 'en' && typeof BOOK_EN !== 'undefined' && BOOK_EN[c.id];
+    const t = pk('BOOK'), e = t && t[c.id];
     Object.assign(c, e || c.ru);
   });
   // то же для уроков (LESSONS_EN): правим поля на месте, чтобы ссылки тренера на вопросы остались рабочими
   const syncLessons = () => LESSONS.forEach(l => {
     if (!l.ru) l.ru = { title: l.title, tag: l.tag, cards: l.cards, quiz: l.quiz.map(q => ({ q: q.q, o: q.o, e: q.e })) };
-    const e = I18N.lang === 'en' && typeof LESSONS_EN !== 'undefined' && LESSONS_EN[l.id], src = e || l.ru;
+    const t = pk('LESSONS'), e = t && t[l.id], src = e || l.ru;
     l.title = src.title; l.tag = src.tag; l.cards = src.cards;
     l.quiz.forEach((q, i) => { if (src.quiz[i]) { q.q = src.quiz[i].q; q.o = src.quiz[i].o; q.e = src.quiz[i].e; } });
   });
   // задачи и ответы карточек: только встроенные (по индексу), личные от тренера идут после них
   const syncDrills = () => {
-    DRILLS.slice(0, DRILLS_EN.length).forEach((d, i) => {
+    const D = pk('DRILLS'), C = pk('CARDS');
+    DRILLS.slice(0, 98).forEach((d, i) => {
       if (!d.ru) d.ru = { q: d.q, o: d.o, e: d.e };
-      const src = I18N.lang === 'en' ? { q: DRILLS_EN[i][0], o: DRILLS_EN[i][1], e: DRILLS_EN[i][2] } : d.ru;
+      const src = D && D[i] ? { q: D[i][0], o: D[i][1], e: D[i][2] } : d.ru;
       d.q = src.q; d.o = src.o; d.e = src.e;
     });
-    CARDS.slice(0, CARDS_EN.length).forEach((c, i) => { if (c.ru === undefined) c.ru = c.a; c.a = I18N.lang === 'en' ? CARDS_EN[i] : c.ru; });
+    CARDS.slice(0, 61).forEach((c, i) => { if (c.ru === undefined) c.ru = c.a; c.a = C && C[i] ? C[i] : c.ru; });
   };
   const syncAll = () => { sync(); syncLessons(); syncDrills(); };
   syncAll();

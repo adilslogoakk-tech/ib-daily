@@ -1,6 +1,6 @@
 'use strict';
 // English version of the built-in drills, same order and option order as DRILLS in content*.js: [question, options, explanation]
-const DRILLS_EN = [
+window.DRILLS_EN = [
 ["EV = 1,200, EBITDA = 150. EV/EBITDA?", ["6.0x", "8.0x", "9.5x", "10.0x"], "1,200 / 150 = 8.0x."],
 ["Share price 40, 50 m diluted shares, net debt 300. EV?", ["2,000", "2,300", "1,700", "2,500"], "Equity = 2,000; EV = 2,000 + 300 = 2,300."],
 ["P/E = 15, Net Income = 80. Equity Value?", ["1,200", "5.3", "1,500", "95"], "15 × 80 = 1,200."],

@@ -1,6 +1,6 @@
 'use strict';
 // English version of the built-in interview card answers, same order as CARDS in content*.js. The questions are already in English.
-const CARDS_EN = [
+window.CARDS_EN = [
 "We forecast FCF for 5-10 years, calculate the terminal value, discount everything at WACC, sum it up into Enterprise Value, then subtract net debt to get Equity Value and the share price.",
 "Net Income from the IS goes into the CFS and into Retained Earnings on the BS. In the CFS we add back D&A, adjust for NWC, subtract CapEx and account for debt and shares. The final change in cash goes onto the BS and balances assets and liabilities.",
 "Cash is a non-operating asset that the buyer gets together with the company and can use to repay debt. So the real price of the operating business is lower.",

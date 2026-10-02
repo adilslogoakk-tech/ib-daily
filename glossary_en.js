@@ -1,6 +1,6 @@
 'use strict';
 // English version of the glossary: key -> [title, explanation, formula]
-const GLOSS_EN = {
+window.GLOSS_EN = {
   ev: ['Enterprise Value (EV)', 'The value of the whole business for everyone who has put money into it: shareholders and lenders alike. It is what you would pay to buy the entire company together with its debt, while also getting its cash.', 'EV = Equity Value + Debt + Preferred + Minority − Cash'],
   eqv: ['Equity Value / Market Cap', 'The value of the company to shareholders only. For a public company this is the market capitalisation: the share price multiplied by the number of (diluted) shares.', 'Equity Value = share price × diluted shares'],
   tv: ['Terminal Value (TV)', 'The value of the company beyond the DCF forecast period. It is calculated as a single number at the end of the forecast and usually makes up 60-80% of the total valuation.', 'Gordon: TV = FCF × (1+g) / (WACC − g); or EBITDA × exit multiple'],
