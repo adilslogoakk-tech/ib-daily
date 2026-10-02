@@ -164,7 +164,7 @@ const systemic = () => Object.entries(S.misc).filter(([c, m]) => MISC[c] && m.ba
 // ---------- выгрузка данных для анализа (цикл «тренер») ----------
 async function shareFile(name, json) {
   const file = new File([json], name, { type: 'application/json' });
-  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: 'IB Daily' }); return true; } catch (e) { if (e.name === 'AbortError') return false; } }
+  if (navigator.canShare && navigator.canShare({ files: [file] })) { try { await navigator.share({ files: [file], title: 'Mandate' }); return true; } catch (e) { if (e.name === 'AbortError') return false; } }
   const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = name; document.body.append(a); a.click(); a.remove();
   return true;
 }

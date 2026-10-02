@@ -6,27 +6,28 @@
 <meta name="theme-color" content="#f5f3ee">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="IB Daily">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mandate">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
-<link rel="icon" href="icon-180.png">
-<title>IB Daily</title>
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" href="icon-180.png">
+<title>Mandate</title>
 <script src="theme.js"></script>
 <style>
 /* ===== темы: базовые цвета; всё остальное считается из них ===== */
 :root{ /* Светлая (по умолчанию) */
   --bg:#f5f3ee; --card:#ffffff; --line:#e3dfd5; --text:#1b1d22; --mute:#6b6f78; --gold:#1b1d22; --on:#ffffff;
-  --c-val:#c9531a; --c-cap:#1f6fb2; --c-prof:#26804f; --c-deal:#7444c2; --green:#26804f; --red:#d64545; --shadow:#1b1d2214;
+  --c-val:#c9531a; --c-cap:#1f6fb2; --c-prof:#26804f; --c-deal:#7444c2; --green:#26804f; --red:#d64545; --shadow:#1b1d2214; --sbar:#1b1d22;
   color-scheme:light;
 }
-:root[data-theme=graphite]{ --bg:#0e1013; --card:#181b20; --line:#272b32; --text:#eceef2; --mute:#8b919c; --gold:#eceef2; --on:#101216;
+:root[data-theme=graphite]{ --sbar:var(--bg); --bg:#0e1013; --card:#181b20; --line:#272b32; --text:#eceef2; --mute:#8b919c; --gold:#eceef2; --on:#101216;
   --c-val:#ff9a62; --c-cap:#5ec8e5; --c-prof:#6fdc9c; --c-deal:#c39bff; --green:#6fdc9c; --red:#ef6b6b; --shadow:#00000066; color-scheme:dark; }
-:root[data-theme=emerald]{ --bg:#0a1411; --card:#12201b; --line:#1f342c; --text:#e8f2ee; --mute:#85a398; --gold:#3ecf8e; --on:#06150e;
+:root[data-theme=emerald]{ --sbar:var(--bg); --bg:#0a1411; --card:#12201b; --line:#1f342c; --text:#e8f2ee; --mute:#85a398; --gold:#3ecf8e; --on:#06150e;
   --c-val:#ff8a7a; --c-cap:#7cc4ff; --c-prof:#b8a4ff; --c-deal:#ff9ec7; --green:#3ecf8e; --red:#ff7b7b; --shadow:#00000066; color-scheme:dark; }
-:root[data-theme=bordeaux]{ --bg:#130a0d; --card:#1d1216; --line:#33202a; --text:#f4ebee; --mute:#a58b94; --gold:#f0a8b4; --on:#2a0c14;
+:root[data-theme=bordeaux]{ --sbar:var(--bg); --bg:#130a0d; --card:#1d1216; --line:#33202a; --text:#f4ebee; --mute:#a58b94; --gold:#f0a8b4; --on:#2a0c14;
   --c-val:#ffb089; --c-cap:#5fd1c4; --c-prof:#a6d98a; --c-deal:#c0a6ff; --green:#a6d98a; --red:#ff8383; --shadow:#00000066; color-scheme:dark; }
-:root[data-theme=violet]{ --bg:#0e0c19; --card:#171428; --line:#272240; --text:#ece9fa; --mute:#9a94bd; --gold:#8b7dff; --on:#0d0a24;
+:root[data-theme=violet]{ --sbar:var(--bg); --bg:#0e0c19; --card:#171428; --line:#272240; --text:#ece9fa; --mute:#9a94bd; --gold:#8b7dff; --on:#0d0a24;
   --c-val:#ff9a8a; --c-cap:#5fd6e0; --c-prof:#78e0a8; --c-deal:#ff8fc7; --green:#78e0a8; --red:#ff8383; --shadow:#00000066; color-scheme:dark; }
 :root{
   --r:20px; --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif; --serif:var(--sans);
@@ -69,7 +70,9 @@ nav button.on{color:var(--gold)}
 nav button.on svg{animation:navpop .5s cubic-bezier(.3,1.7,.5,1)}
 /* профиль */
 .avatar{position:absolute;top:18px;right:18px;width:42px;height:42px;border-radius:50%;background:linear-gradient(180deg,var(--gold2),var(--gold));color:var(--on);font-weight:700;font-size:17px;display:grid;place-items:center;box-shadow:0 6px 16px var(--shadow);z-index:2}
-.avatar.big{position:static;width:56px;height:56px;font-size:22px;flex:none}
+.avatar.big{position:relative;top:auto;right:auto;width:64px;height:64px;font-size:24px;flex:none;cursor:pointer}
+.avatar .cam{position:absolute;right:-3px;bottom:-3px;width:22px;height:22px;border-radius:50%;background:var(--card);color:var(--text);border:1px solid var(--line);font-size:11px;display:grid;place-items:center}
+#sbar{position:fixed;top:0;left:0;right:0;height:env(safe-area-inset-top);background:var(--sbar);z-index:101;pointer-events:none}
 /* кольцо */
 .ring{position:relative;width:104px;height:104px;flex:none}
 .ring svg{transform:rotate(-90deg)}
@@ -113,6 +116,12 @@ nav button.on svg{animation:navpop .5s cubic-bezier(.3,1.7,.5,1)}
 .stat{background:var(--soft);border:1px solid var(--line);border-radius:16px;padding:14px}
 .stat b{font-weight:600;font-size:24px;display:block}
 input[type=text],input[type=password],input[type=time],input[type=date],select{width:100%;background:var(--soft);border:1px solid var(--line);color:var(--text);border-radius:12px;padding:12px;font-size:16px;font-family:inherit}
+/* iOS: поля даты и времени имеют свою минимальную ширину и выпирают из сетки, поэтому сбрасываем */
+.grid2>*,.row>*{min-width:0}
+input,select{max-width:100%}
+input[type=date],input[type=time]{-webkit-appearance:none;appearance:none;min-width:0;display:block;height:46px;line-height:1.2;text-align:left}
+input[type=date]::-webkit-date-and-time-value,input[type=time]::-webkit-date-and-time-value{text-align:left;min-height:1.2em;margin:0}
+input[type=date]::-webkit-calendar-picker-indicator{opacity:.6}
 .toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top));transform:translateX(-50%);background:var(--gold);color:var(--on);font-weight:700;padding:10px 16px;border-radius:99px;z-index:60;box-shadow:0 10px 30px var(--shadow);animation:toast .45s cubic-bezier(.3,1.5,.5,1)}
 .banner{background:linear-gradient(135deg,color-mix(in srgb,var(--bg) 55%,var(--line)),var(--bg));border:1px solid var(--line)}
 .ticker{display:flex;gap:10px;overflow:auto;scrollbar-width:none}
@@ -142,6 +151,7 @@ input[type=text],input[type=password],input[type=time],input[type=date],select{w
 .pl.now{background:var(--card);border-left:3px solid var(--c-val);padding:2px 6px}
 .chkrow{display:flex;gap:8px;align-items:flex-start;font-size:13px;margin:12px 0 0;line-height:1.4}
 .chkrow input{margin-top:2px;flex:none}
+.lb{margin:0 0 4px 2px}
 .offline{color:var(--red)}
 /* настройки */
 .themes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
@@ -158,7 +168,11 @@ input[type=text],input[type=password],input[type=time],input[type=date],select{w
 /* заставка и конфетти */
 #splash{position:fixed;inset:0;background:var(--bg);display:grid;place-items:center;z-index:100;transition:opacity .55s ease,visibility .55s}
 #splash.hide{opacity:0;visibility:hidden}
-#splash .mark{width:92px;height:92px;border-radius:26px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:var(--on);display:grid;place-items:center;font-size:38px;font-weight:700;letter-spacing:-.02em;box-shadow:0 18px 44px var(--shadow);animation:markin .8s cubic-bezier(.2,1.5,.4,1) both}
+#splash{grid-template-rows:auto auto auto;align-content:center;justify-items:center}
+#splash .mark{width:96px;height:96px;border-radius:27px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:var(--on);display:grid;place-items:center;box-shadow:0 18px 44px var(--shadow);animation:markin .8s cubic-bezier(.2,1.5,.4,1) both}
+#splash .mark svg{width:58px;height:auto}
+#splash .nm{margin-top:18px;font-size:26px;font-weight:700;letter-spacing:-.02em;animation:rise .6s .25s cubic-bezier(.2,.8,.2,1) both}
+#splash .by{margin-top:2px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);animation:rise .6s .35s cubic-bezier(.2,.8,.2,1) both}
 #splash .ln{position:absolute;bottom:22%;width:90px;height:3px;border-radius:3px;background:var(--track);overflow:hidden}
 #splash .ln::after{content:'';display:block;height:100%;width:40%;border-radius:3px;background:var(--gold);animation:slide 1s ease-in-out infinite}
 #fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:70}
@@ -199,7 +213,8 @@ html[data-anim=off] *,html[data-anim=off] *::before,html[data-anim=off] *::after
 </style>
 </head>
 <body>
-<div id="splash"><div class="mark">IB</div><div class="ln"></div></div>
+<div id="sbar"></div>
+<div id="splash"><div class="mark"><svg viewBox="70 128 378 262" aria-hidden="true"><defs><clipPath id="mt"><rect x="0" y="152" width="512" height="300"/></clipPath></defs><path d="M98 366V152L171 280L244 152V366" fill="none" stroke="currentColor" stroke-width="40" stroke-miterlimit="6" clip-path="url(#mt)"/><path d="M298 172H440M369 172V366" fill="none" stroke="var(--c-val)" stroke-width="40"/></svg></div><div class="nm">Mandate</div><div class="by">by T11</div><div class="ln"></div></div>
 <canvas id="fx"></canvas>
 <main id="app"></main>
 <nav id="nav"></nav>

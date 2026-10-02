@@ -1,4 +1,4 @@
--- IB Daily: схема облака. Вставь целиком в Supabase -> SQL Editor -> Run.
+-- Mandate: схема облака. Вставь целиком в Supabase -> SQL Editor -> Run.
 -- Все таблицы закрыты правилами доступа (RLS): пользователь видит только свои строки.
 
 -- документы: state (прогресс ученика), jobs, results, personal

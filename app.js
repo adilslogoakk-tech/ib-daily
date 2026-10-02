@@ -145,7 +145,7 @@ function go(t) { if (t === 'settings' && tab !== 'settings') prevTab = tab; tab 
 let authErr = '';
 const RU_ERR = { 'Invalid login credentials': 'Неверный email или пароль', 'User already registered': 'Такой аккаунт уже есть, нажми «Войти»', 'Email not confirmed': 'Подтверди почту по письму, затем войди' };
 function authHtml() {
-  return `<div class="tag">IB Daily</div><h1>Вход</h1><p class="sub">Прогресс и вакансии хранятся в твоём облаке и доступны только тебе.</p>
+  return `<div class="tag">Mandate</div><h1>Вход</h1><p class="sub">Прогресс и вакансии хранятся в твоём облаке и доступны только тебе.</p>
   <div class="card"><input type="text" id="au-email" placeholder="Email" inputmode="email" autocapitalize="off" autocomplete="username"><input type="password" id="au-pass" placeholder="Пароль (от 6 символов)" style="margin-top:8px" autocomplete="current-password">
   <p class="small" style="color:var(--red);margin:10px 0 0">${esc(authErr)}</p>
   <button class="btn" data-act="login">Войти</button><button class="btn ghost" data-act="signup">Создать аккаунт</button></div>
@@ -154,6 +154,20 @@ function authHtml() {
 // ---------- анимации ----------
 const animOn = () => S.anim !== false && !(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 const applyAnim = () => { document.documentElement.dataset.anim = S.anim === false ? 'off' : 'on'; };
+const avStyle = () => S.photo ? ` style="background-image:url(${S.photo});background-size:cover;background-position:center"` : '';
+const avInner = () => S.photo ? '' : esc(initial());
+// фото: по центру обрезаем в квадрат 256x256 и сжимаем в JPEG, чтобы оно легко синхронизировалось
+async function setPhoto(file) {
+  if (!file) return;
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }).catch(() => createImageBitmap(file));
+    const n = 256, m = Math.min(bmp.width, bmp.height), cv = document.createElement('canvas');
+    cv.width = cv.height = n;
+    cv.getContext('2d').drawImage(bmp, (bmp.width - m) / 2, (bmp.height - m) / 2, m, m, 0, 0, n, n);
+    S.photo = cv.toDataURL('image/jpeg', 0.82); save();
+    T.track('photo', { kb: Math.round(S.photo.length / 1024) }); toast('Фото обновлено'); render();
+  } catch (e) { toast('Не удалось загрузить фото'); }
+}
 const initial = () => { const n = (S.name || CLOUD.email || '').trim(); return n ? n[0].toUpperCase() : '👤'; };
 function enterView() {
   const app = $('#app'); app.classList.remove('enter'); void app.offsetWidth; app.classList.add('enter');
@@ -192,7 +206,7 @@ function render() {
   const key = sess ? sess.type + ':' + (sess.type === 'lesson' ? (sess.i < sess.l.cards.length ? 'r' + sess.i : 'q' + sess.qi) : (sess.qi ?? sess.i ?? '')) : tab;
   const enter = key !== lastKey; lastKey = key;
   const app = $('#app');
-  app.innerHTML = (sess || tab === 'settings' ? '' : `<button class="avatar" data-go="settings" aria-label="Профиль и настройки">${esc(initial())}</button>`) + (sess ? views[sess.type]() : views[tab]());
+  app.innerHTML = (sess || tab === 'settings' ? '' : `<button class="avatar" data-go="settings" aria-label="Профиль и настройки"${avStyle()}>${avInner()}</button>`) + (sess ? views[sess.type]() : views[tab]());
   if (!sess && tab === 'news') loadNews();
   if (!enter) app.classList.remove('enter'); else if (!booting && animOn()) enterView();
   T.onRender();
@@ -207,7 +221,7 @@ views.today = () => {
   const goal = S.goals.find(g => !g.done);
   const late = (!allDone() || appsToday() < DAILY_APPS) && new Date().toTimeString().slice(0, 5) >= S.remind;
   return `
-  <div class="row sp"><div><div class="tag">IB Daily</div><h1>${hello}${S.name ? ', ' + esc(S.name) : ''}</h1><p class="sub">15 минут в день — путь в Investment Banking</p></div></div>
+  <div class="row sp"><div><div class="tag">Mandate</div><h1>${hello}${S.name ? ', ' + esc(S.name) : ''}</h1><p class="sub">15 минут в день — путь в Investment Banking</p></div></div>
   <div class="row" style="margin-top:14px;gap:8px"><span class="pill"><span class="flame">🔥</span> <span data-count="${streak()}">${streak()}</span> дн.</span><span class="pill gold">★ <span data-count="${S.xp}">${S.xp}</span> XP</span><span class="pill">${L.name}</span></div>
   ${late ? `<div class="card banner"><b>⏰ Время действовать</b><p class="sub" style="color:var(--mute)">${!allDone() ? `Шагов обучения: ${STEPS.length - n}. ` : ''}${appsToday() < DAILY_APPS ? `Заявок осталось: ${DAILY_APPS - appsToday()}.` : ''}</p></div>` : ''}
   <div class="card"><div class="row"><div class="ring"><svg width="104" height="104" viewBox="0 0 104 104" style="--circ:${C}"><circle class="tr" cx="52" cy="52" r="44"/><circle class="fg" cx="52" cy="52" r="44" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/></svg><div class="c"><b>${n}/${STEPS.length}</b></div></div>
@@ -314,8 +328,8 @@ function eventsCard() {
   <div style="margin-top:14px"><div class="tag" style="margin-bottom:6px">Добавить</div>
   <select id="ev-job"><option value="">Без привязки к вакансии</option>${jobs.map(j => `<option value="${j.id}" ${d.jobId === j.id ? 'selected' : ''}>${esc(j.company)}: ${esc(j.title.slice(0, 40))}</option>`).join('')}</select>
   <input type="text" id="ev-title" placeholder="Название (например, тест PHOENIX)" value="${esc(d.title)}" style="margin-top:8px">
-  <div class="grid2" style="margin-top:8px"><select id="ev-type">${Object.entries(EV_TYPES).map(([k, v]) => `<option value="${k}" ${d.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select><input type="date" id="ev-date" value="${d.date}"></div>
-  <input type="time" id="ev-time" value="${d.time}" style="margin-top:8px">
+  <div class="grid2" style="margin-top:8px"><div><div class="small mute lb">Тип</div><select id="ev-type">${Object.entries(EV_TYPES).map(([k, v]) => `<option value="${k}" ${d.type === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div><div><div class="small mute lb">Дата</div><input type="date" id="ev-date" value="${d.date}"></div></div>
+  <div class="small mute lb" style="margin-top:8px">Время</div><input type="time" id="ev-time" value="${d.time}">
   <p class="small mute" style="margin:10px 0 6px">Что готовить</p><div class="sts">${Object.entries(TOPICS).map(([k, c]) => `<button class="st ${d.topics.includes(k) ? 'on' : ''}" data-evtopic="${k}">${c.name}</button>`).join('')}</div>
   <label class="chkrow"><input type="checkbox" id="ev-prep" ${d.prep ? 'checked' : ''}> Попросить тренера составить план и персональные задачи</label>
   <button class="btn" data-act="evadd">Добавить в календарь подготовки</button></div></div>`;
@@ -327,7 +341,7 @@ function evToday() {
 }
 function icsEvent(e) {
   const p = n => String(n).padStart(2, '0'), [h, m] = (e.time || '10:00').split(':'), dt = e.date.replace(/-/g, '') + 'T' + p(h) + p(m) + '00';
-  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//IB Daily//RU', 'BEGIN:VEVENT', 'UID:ibdaily-ev-' + e.id + '@local', 'DTSTAMP:' + dt, 'DTSTART:' + dt, 'DURATION:PT1H', 'SUMMARY:' + e.title,
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Mandate//RU', 'BEGIN:VEVENT', 'UID:ibdaily-ev-' + e.id + '@local', 'DTSTAMP:' + dt, 'DTSTART:' + dt, 'DURATION:PT1H', 'SUMMARY:' + e.title,
     'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:Завтра: ' + e.title, 'END:VALARM', 'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY', 'DESCRIPTION:Через час: ' + e.title, 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   location.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
 }
@@ -362,7 +376,9 @@ views.settings = () => {
   const stat = (l, v, n) => `<div class="stat"><span class="small mute">${l}</span><b ${n ? `data-count="${v}"` : 'style="font-size:17px"'}>${v}</b></div>`;
   return `<div class="row"><button class="pill" data-act="back">‹ Назад</button></div>
   <div class="tag" style="margin-top:14px">Профиль</div><h1>Настройки</h1>
-  <div class="card"><div class="row"><div class="avatar big">${esc(initial())}</div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:17px">${esc(S.name || 'Без имени')}</div><div class="small mute">${CLOUD.on ? esc(CLOUD.email) : 'Данные только на этом телефоне'}</div></div></div>
+  <div class="card"><div class="row"><div class="avatar big" data-act="photopick" role="button" aria-label="Фото профиля"${avStyle()}>${avInner()}<span class="cam">📷</span></div><div style="flex:1;min-width:0"><div style="font-weight:600;font-size:17px">${esc(S.name || 'Без имени')}</div><div class="small mute">${CLOUD.on ? esc(CLOUD.email) : 'Данные только на этом телефоне'}</div></div></div>
+  <input type="file" id="photo" accept="image/*" hidden>
+  <div class="row" style="margin-top:12px;gap:8px"><button class="pill" data-act="photopick">📷 ${S.photo ? 'Изменить фото' : 'Добавить фото'}</button>${S.photo ? '<button class="pill" data-act="photodel">Удалить фото</button>' : ''}</div>
   <input type="text" id="nm" placeholder="Как к тебе обращаться" value="${esc(S.name || '')}" style="margin-top:12px">
   <div class="grid2" style="margin-top:12px">${stat('Уровень', L.name)}${stat('Опыт', S.xp, 1)}${stat('Серия', streak(), 1)}${stat('Лучшая серия', Math.max(S.best, streak()), 1)}</div></div>
   <div class="card"><h2>Тема оформления</h2><div class="themes">${THEME_LIST.map(t => `<button class="theme ${cur === t.id ? 'on' : ''}" data-th="${t.id}">${sw(t)}${t.name}</button>`).join('')}</div>
@@ -376,7 +392,7 @@ views.settings = () => {
   <button class="btn ghost" data-act="export">Выгрузить данные для тренера</button><button class="btn ghost" data-act="clearlog">Удалить журнал событий</button>
   <p class="small mute" style="line-height:1.5;margin:12px 0 0">Записывается: время и результат каждого ответа, выбранный вариант, время в разделах, статусы заявок. Данные хранятся на телефоне и в твоём облаке и больше нигде.</p></div>
   <button class="btn ghost" data-act="reset" style="margin-bottom:12px">Сбросить прогресс</button>
-  <p class="small mute" style="text-align:center;margin-bottom:24px">IB Daily</p>`;
+  <p class="small mute" style="text-align:center;margin-bottom:24px">Mandate · by T11</p>`;
 };
 
 // ---------- сессии ----------
@@ -466,8 +482,8 @@ function icsReminder() {
   const [h, m] = (($('#rt') || {}).value || S.remind).split(':'); S.remind = h + ':' + m; save();
   const d = new Date(); const p = n => String(n).padStart(2, '0');
   const dt = d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + 'T' + h + m + '00';
-  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//IB Daily//RU', 'BEGIN:VEVENT', 'UID:ibdaily-' + Date.now() + '@local', 'DTSTAMP:' + dt, 'DTSTART:' + dt, 'DURATION:PT15M', 'RRULE:FREQ=DAILY',
-    'SUMMARY:IB Daily: 15 минут к карьере в IB', 'DESCRIPTION:Концепция, задачи, новости. Продли серию.', 'BEGIN:VALARM', 'TRIGGER:PT0S', 'ACTION:DISPLAY', 'DESCRIPTION:IB Daily', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  const ics = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Mandate//RU', 'BEGIN:VEVENT', 'UID:ibdaily-' + Date.now() + '@local', 'DTSTAMP:' + dt, 'DTSTART:' + dt, 'DURATION:PT15M', 'RRULE:FREQ=DAILY',
+    'SUMMARY:Mandate: 15 минут к карьере в IB', 'DESCRIPTION:Концепция, задачи, новости. Продли серию.', 'BEGIN:VALARM', 'TRIGGER:PT0S', 'ACTION:DISPLAY', 'DESCRIPTION:Mandate', 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   location.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
 }
 
@@ -515,6 +531,8 @@ document.addEventListener('click', e => {
     case 'ics': return icsReminder();
     case 'export': return T.exportData();
     case 'back': return go(prevTab);
+    case 'photopick': { const f = $('#photo'); if (f) f.click(); return; }
+    case 'photodel': delete S.photo; save(); toast('Фото удалено'); return render();
     case 'login': case 'signup': {
       const em = ($('#au-email').value || '').trim(), pw = $('#au-pass').value || '';
       authErr = '';
@@ -573,6 +591,7 @@ document.addEventListener('change', e => {
   if (id === 'ev-job') { evDraft.jobId = e.target.value; const j = JOBS.jobs.find(x => x.id === evDraft.jobId); if (j) { evDraft.title = j.company + ': ' + j.title.slice(0, 40); evDraft.topics = evSuggest(j.id, evDraft.type); } render(); }
   else if (id === 'ev-type') { evDraft.type = e.target.value; if (evDraft.jobId) evDraft.topics = evSuggest(evDraft.jobId, evDraft.type); render(); }
   else if (id === 'ev-prep') evDraft.prep = e.target.checked;
+  else if (id === 'photo') { setPhoto(e.target.files[0]); e.target.value = ''; }
   else if (id === 'anim') { S.anim = e.target.checked; save(); applyAnim(); if (S.anim) toast('Анимации включены'); }
   else if (id === 'ev-date') evDraft.date = e.target.value;
   else if (id === 'ev-time') evDraft.time = e.target.value;
