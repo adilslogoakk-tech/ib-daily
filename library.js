@@ -129,7 +129,16 @@ const LIB = (() => {
     l.title = src.title; l.tag = src.tag; l.cards = src.cards;
     l.quiz.forEach((q, i) => { if (src.quiz[i]) { q.q = src.quiz[i].q; q.o = src.quiz[i].o; q.e = src.quiz[i].e; } });
   });
-  const syncAll = () => { sync(); syncLessons(); };
+  // задачи и ответы карточек: только встроенные (по индексу), личные от тренера идут после них
+  const syncDrills = () => {
+    DRILLS.slice(0, DRILLS_EN.length).forEach((d, i) => {
+      if (!d.ru) d.ru = { q: d.q, o: d.o, e: d.e };
+      const src = I18N.lang === 'en' ? { q: DRILLS_EN[i][0], o: DRILLS_EN[i][1], e: DRILLS_EN[i][2] } : d.ru;
+      d.q = src.q; d.o = src.o; d.e = src.e;
+    });
+    CARDS.slice(0, CARDS_EN.length).forEach((c, i) => { if (c.ru === undefined) c.ru = c.a; c.a = I18N.lang === 'en' ? CARDS_EN[i] : c.ru; });
+  };
+  const syncAll = () => { sync(); syncLessons(); syncDrills(); };
   syncAll();
   return { sync: syncAll, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, reset: () => { ch = null; } };
 })();
