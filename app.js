@@ -16,6 +16,7 @@ const ICONS = {
   today: '<path d="M3 11l9-8 9 8M5 10v10h14V10"/>',
   learn: '<path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19a2 2 0 002 2h13"/>',
   news: '<path d="M4 5h13a3 3 0 013 3v11H6a2 2 0 01-2-2zM8 9h8M8 13h8"/>',
+  book: '<path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h11M9 8h6"/>',
   jobs: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M3 13h18"/>',
   goals: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>',
 };
@@ -26,7 +27,7 @@ let S = load();
 function normalize(s) {
   s = s || { xp: 0, days: {}, lessons: [], boxes: {}, miss: {}, goals: DEFAULT_GOALS, remind: '19:00', best: 0 };
   // значения по умолчанию для полей, добавленных позже (работает и для старых сохранений, и после сброса)
-  for (const [k, v] of Object.entries({ apps: {}, seen: [], items: {}, topics: {}, wrong: {}, focus: [], stats: {}, misc: {}, events: [], requests: [], reqDel: [] })) s[k] = s[k] || v;
+  for (const [k, v] of Object.entries({ apps: {}, seen: [], items: {}, topics: {}, wrong: {}, focus: [], stats: {}, misc: {}, events: [], requests: [], reqDel: [], later: [], read: {}, pos: {} })) s[k] = s[k] || v;
   for (const k of ['hour', 'time', 'ms']) s.stats[k] = s.stats[k] || {};
   return s;
 }
@@ -67,6 +68,7 @@ const CATS = {
   deal: { name: 'Сделки (M&A, LBO)', ic: '🤝', terms: ['LBO', 'M&A', 'accretive', 'dilutive', 'Accretion', 'Dilution', 'MOIC', 'IRR', 'goodwill', 'Goodwill', 'IPO', 'CIM', 'IOI', 'SPA', 'Greenshoe', 'breakup fee', 'cash sweep', 'PIK', 'MAC', 'exit', 'sponsor', 'синерги', 'премию за контроль', 'премия за контроль', 'deleveraging', 'покупател'] },
 };
 const LESSON_CAT = { ev: 'val', mult: 'val', dcf: 'val', wacc: 'cap', fs: 'prof', comps: 'deal', ad: 'deal', lbo: 'deal', wc: 'prof' };
+for (const g of GLOSS) for (const m of g.m) if (!CATS[g.c].terms.some(t => t.toLowerCase() === m.toLowerCase())) CATS[g.c].terms.push(m);
 const TERM_MAP = {}, TERM_RE = (() => {
   const all = [];
   for (const [k, c] of Object.entries(CATS)) for (const t of c.terms) { TERM_MAP[t.toLowerCase()] = k; all.push(t); }
@@ -76,7 +78,11 @@ const TERM_MAP = {}, TERM_RE = (() => {
   const W = String.raw`[\p{L}\p{N}]`;
   return new RegExp(`(?<!${W})(${all.map(rx).join('|')})(?!${W})|(?<!${W})((?:${all.filter(t => /[а-я]/i.test(t)).map(rx).join('|')})[а-яё]*)`, 'giu');
 })();
-const hl = s => esc(s).replace(TERM_RE, m => { const k = TERM_MAP[m.toLowerCase().replace(/&amp;/g, '&')] || TERM_MAP[Object.keys(TERM_MAP).find(t => m.toLowerCase().startsWith(t) && /[а-я]/i.test(t))]; return k ? `<span class="k k-${k}">${m}</span>` : m; });
+const hl = s => esc(s).replace(TERM_RE, m => {
+  const low = m.toLowerCase().replace(/&amp;/g, '&'), g = LIB.find(low);
+  const k = g ? g.c : TERM_MAP[low] || TERM_MAP[Object.keys(TERM_MAP).find(t => low.startsWith(t) && /[а-я]/i.test(t))];
+  return k ? `<span class="k k-${k}"${g ? ` data-term="${g.k}"` : ''}>${m}</span>` : m;
+});
 
 
 const views = {};
@@ -143,8 +149,8 @@ views.jobs = () => {
 
 // ---------- навигация ----------
 let tab = 'today', sess = null, prevTab = 'today', lastKey = '', lastNav = '', booting = true, enterT = null;
-const TABS = [['today', 'Сегодня'], ['learn', 'Учёба'], ['jobs', 'Вакансии'], ['news', 'Новости'], ['goals', 'Прогресс']];
-function go(t) { FX.iv.stop(); if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
+const TABS = [['today', 'Сегодня'], ['learn', 'Учёба'], ['book', 'Книга'], ['jobs', 'Вакансии'], ['news', 'Новости'], ['goals', 'Прогресс']];
+function go(t) { FX.iv.stop(); LIB.closeSheet(); if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
 let authErr = '';
 const RU_ERR = { 'Invalid login credentials': 'Неверный email или пароль', 'User already registered': 'Такой аккаунт уже есть, нажми «Войти»', 'Email not confirmed': 'Подтверди почту по письму, затем войди' };
 function authHtml() {
@@ -206,10 +212,10 @@ function hideSplash() {
 function render() {
   if (CLOUD.enabled && !CLOUD.on && !S.localOnly) { $('#nav').innerHTML = ''; lastNav = ''; $('#app').innerHTML = authHtml(); return; }
   if (lastNav !== tab) { $('#nav').innerHTML = TABS.map(([k, l]) => `<button class="${tab === k ? 'on' : ''}" data-go="${k}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${l}</button>`).join(''); lastNav = tab; }
-  const key = sess ? sess.type + ':' + (sess.type === 'lesson' ? (sess.i < sess.l.cards.length ? 'r' + sess.i : 'q' + sess.qi) : (sess.qi ?? sess.i ?? '')) : tab;
+  const key = sess ? sess.type + ':' + (sess.type === 'lesson' ? (sess.i < sess.l.cards.length ? 'r' + sess.i : 'q' + sess.qi) : (sess.qi ?? sess.i ?? '')) : tab === 'book' ? 'book:' + (LIB.cur() || '') : tab;
   const enter = key !== lastKey; lastKey = key;
   const app = $('#app');
-  app.innerHTML = (sess || tab === 'settings' ? '' : `<button class="avatar" data-go="settings" aria-label="Профиль и настройки"${avStyle()}>${avInner()}</button>`) + (sess ? views[sess.type]() : views[tab]());
+  app.innerHTML = (sess || tab === 'settings' || (tab === 'book' && LIB.cur()) ? '' : `<button class="avatar" data-go="settings" aria-label="Профиль и настройки"${avStyle()}>${avInner()}</button>`) + (sess ? views[sess.type]() : views[tab]());
   if (!sess && tab === 'news') loadNews();
   if (!enter) app.classList.remove('enter'); else if (!booting && animOn()) enterView();
   if (document.getElementById('weekbox')) FX.week.fill();
@@ -246,6 +252,7 @@ function coachCard() {
   return `<div class="card"><div class="tag">Что подтянуть</div><div style="font-size:17px;font-weight:600;margin:4px 0">${TOPICS[w.k].name}: освоено ${w.k100}%</div><p class="small mute" style="margin:0">По ${w.n} ответам.${w.sp > 1.3 ? ' Ты в этой теме медленнее своей нормы.' : ''}</p><button class="btn ghost" data-start="drill-topic" data-topic="${w.k}">Тренировать 5 минут</button></div>`;
 }
 views.interview = () => FX.iv.html();
+views.book = () => LIB.html();
 views.learn = () => `
   <div class="tag">Учёба</div><h1>Концепции</h1><p class="sub">${S.lessons.length} из ${LESSONS.length} уроков пройдено · ${DRILLS.length} задач · ${CARDS.length} карточек</p>${S.lessons.length >= LESSONS.length ? '<div class="card banner"><b>Все уроки пройдены</b><p class="sub" style="color:var(--mute)">Дальше идёт повторение. Новые уроки добавим позже.</p></div>' : ''}
   <div class="grid2" style="margin-top:14px"><button class="btn ghost" style="margin:0" data-start="drill-free">🧮 Задачи</button><button class="btn ghost" style="margin:0" data-start="cards">🃏 Карточки</button></div>
@@ -352,7 +359,7 @@ function icsEvent(e) {
     'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:Завтра: ' + e.title, 'END:VALARM', 'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY', 'DESCRIPTION:Через час: ' + e.title, 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   location.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
 }
-const SEC = { interview: 'Собеседование', today: 'Сегодня', learn: 'Учёба', lesson: 'Уроки', drill: 'Задачи', cards: 'Карточки', jobs: 'Вакансии', news: 'Новости', goals: 'Прогресс' };
+const SEC = { book: 'Книга', interview: 'Собеседование', today: 'Сегодня', learn: 'Учёба', lesson: 'Уроки', drill: 'Задачи', cards: 'Карточки', jobs: 'Вакансии', news: 'Новости', goals: 'Прогресс' };
 function insights() {
   const rows = T.topicRows(), rec = T.recurring(), bh = T.bestHour(), tw = Object.entries(T.timeByWeek()).sort((a, b) => b[1] - a[1]);
   const col = k => k < 0.4 ? 'var(--red)' : k < 0.7 ? 'var(--c-val)' : 'var(--green)';
@@ -411,7 +418,7 @@ function startLesson(id) {
 views.lesson = () => {
   const s = sess, l = s.l, total = l.cards.length + l.quiz.length, pos = s.i < l.cards.length ? s.i : l.cards.length + s.qi;
   const head = `<div class="row sp"><button class="pill" data-act="exit">✕</button><span class="small mute">${l.title}</span></div><div class="bar" style="margin-top:14px"><i style="width:${pos / total * 100}%"></i></div>`;
-  if (s.i < l.cards.length) return head + `<div class="card"><div class="lesson-card"><div>${hl(l.cards[s.i])}</div></div></div><button class="btn" data-act="lnext">Дальше</button>`;
+  if (s.i < l.cards.length) return head + `<div class="card"><div class="lesson-card"><div>${hl(l.cards[s.i])}</div></div></div><div class="lrow">${LIB.btn('lc', l.id + ':' + s.i, 'Не понял, сохранить на потом')}</div><button class="btn" data-act="lnext">Дальше</button>`;
   if (s.qi < l.quiz.length) return head + quizHtml(l.quiz[s.qi], s, 'lans', 'lq');
   const full = s.ok === l.quiz.length;
   return head + `<div class="card" style="text-align:center"><h2>Урок пройден</h2><p class="sub">Правильных ответов: ${s.ok} из ${l.quiz.length}</p></div><button class="btn" data-act="lfin">Завершить</button>`;
@@ -421,7 +428,7 @@ function quizHtml(q, s, act, nextAct) {
   const p = s.picked, pend = s.pend, why = s.why && s.why[s.qi];
   return `<div class="card">${why ? `<div class="why">${esc(why)}</div>` : ''}<h2>${hl(q.q)}</h2>${o.map((x, k) => `<button class="opt ${p != null ? (x.i === q.a ? 'ok' : k === p ? 'bad' : '') : pend === k ? 'sel' : ''}" data-act="${act}" data-k="${k}" ${p != null || pend != null ? 'disabled' : ''}>${hl(x.t)}</button>`).join('')}
   ${pend != null ? `<div style="margin-top:14px"><span class="small mute">Насколько ты уверен(а) в ответе?</span><div class="grid2"><button class="btn ghost" style="margin:6px 0 0" data-act="conf" data-v="guess">Угадываю</button><button class="btn" style="margin:6px 0 0" data-act="conf" data-v="sure">Уверен(а)</button></div></div>` : ''}
-  ${p != null ? `<div class="explain">${hl(q.e)}${diag(q, o[p])}</div>` : ''}</div>${p != null ? `<button class="btn" data-act="${nextAct}">Дальше</button>` : ''}`;
+  ${p != null ? `<div class="explain">${hl(q.e)}${diag(q, o[p])}<div class="lrow">${LIB.btn('q', q.id, 'Не понял, сохранить на потом')}</div></div>` : ''}</div>${p != null ? `<button class="btn" data-act="${nextAct}">Дальше</button>` : ''}`;
 }
 function diag(q, opt) {
   const m = opt.i !== q.a && q.mis && MISC[q.mis[opt.t]];
@@ -456,7 +463,7 @@ views.cards = () => {
   if (s.i >= s.q.length) return head + `<div class="card" style="text-align:center"><h2>Серия окончена</h2><p class="sub">Карточки с ошибками вернутся раньше.</p></div><button class="btn" data-act="exit">Готово</button>`;
   const c = s.q[s.i];
   return head + `<div class="card flash"><div class="in ${s.flip ? 'flip' : ''}" data-act="flip">${s.flip ? hl(c.a) : '<div><div class="tag" style="margin-bottom:10px">' + esc(s.why[s.i]) + '</div>' + hl(c.q) + '<div class="small mute" style="margin-top:14px;font-family:var(--sans)">нажми, чтобы увидеть ответ</div></div>'}</div></div>
-  ${s.flip ? `<div class="grid2"><button class="btn ghost" data-act="cno">Повторить</button><button class="btn" data-act="cyes">Знал(а)</button></div>` : ''}`;
+  ${s.flip ? `<div class="lrow" style="text-align:center">${LIB.btn('card', c.id, 'Не понял, сохранить на потом')}</div><div class="grid2"><button class="btn ghost" data-act="cno">Повторить</button><button class="btn" data-act="cyes">Знал(а)</button></div>` : ''}`;
 };
 
 // ---------- новости и курсы ----------
@@ -497,9 +504,11 @@ function icsReminder() {
 
 // ---------- события ----------
 document.addEventListener('click', e => {
+  const tk = e.target.closest('.k[data-term]');
+  if (tk && !(tk.closest('.opt') && sess && sess.picked == null && sess.pend == null)) { LIB.openTerm(tk.dataset.term); return; }
   const t = e.target.closest('[data-go],[data-start],[data-lesson],[data-act],[data-goal],[data-del],[data-read],[data-job],[data-st],[data-filter],[data-focus],[data-evtopic],[data-th]'); if (!t) return;
   const D = t.dataset;
-  if (D.go) return go(D.go);
+  if (D.go) { if (D.go === 'book' && tab === 'book') LIB.reset(); return go(D.go); }
   if (D.th) { S.theme = D.th; save(); applyTheme(D.th, animOn()); return render(); }
   if (D.job) { jobOpen = jobOpen === D.job ? null : D.job; return render(); }
   if (D.st) { setStatus(D.id, D.st); return render(); }
@@ -592,7 +601,7 @@ document.addEventListener('click', e => {
     }
     case 'clearlog': if (confirm('Удалить журнал событий? Статистика по темам останется.')) T.clearLog(); return;
     case 'reset': if (confirm('Удалить весь прогресс?')) { localStorage.removeItem(KEY); S = load(); save(); render(); } return;
-    default: if (FX.act(D.act, D)) return;
+    default: if (FX.act(D.act, D) || LIB.act(D.act, D)) return;
   }
 });
 

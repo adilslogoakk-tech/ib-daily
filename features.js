@@ -57,7 +57,7 @@ const FX = (() => {
         <p class="small mute" style="line-height:1.5;margin:0">Ответь вслух, как на собеседовании. Цель: уложиться в ${mmss(t)}. ${beh ? 'Структура: ситуация, действие, результат.' : 'Структура: определение, шаги, вывод.'}</p></div></div>
         <button class="btn" data-act="ivshow">Показать эталонный ответ</button>`;
       }
-      return head + `<div class="card"><div class="tag">Эталонный ответ</div><div style="font-size:16px;line-height:1.55;margin-top:8px">${hl(c.a)}</div><p class="small mute" style="margin:12px 0 0">Ты говорил(а): ${mmss(Math.round(s.spoke / 1000))} из ${mmss(s.target)}.</p></div>
+      return head + `<div class="card"><div class="tag">Эталонный ответ</div><div style="font-size:16px;line-height:1.55;margin-top:8px">${hl(c.a)}</div><p class="small mute" style="margin:12px 0 0">Ты говорил(а): ${mmss(Math.round(s.spoke / 1000))} из ${mmss(s.target)}.</p><div class="lrow">${LIB.btn('card', c.id, 'Не понял, сохранить на потом')}</div></div>
       <p class="small mute" style="margin:14px 0 4px">Оцени честно: насколько ответ совпал с эталоном?</p>
       <div class="gr"><button class="g0" data-act="ivgrade" data-g="0">Не смог(ла)</button><button class="g1" data-act="ivgrade" data-g="1">Частично</button><button class="g2" data-act="ivgrade" data-g="2">Уверенно</button></div>`;
     },
