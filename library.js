@@ -122,6 +122,14 @@ const LIB = (() => {
     const e = I18N.lang === 'en' && typeof BOOK_EN !== 'undefined' && BOOK_EN[c.id];
     Object.assign(c, e || c.ru);
   });
-  sync();
-  return { sync, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, reset: () => { ch = null; } };
+  // то же для уроков (LESSONS_EN): правим поля на месте, чтобы ссылки тренера на вопросы остались рабочими
+  const syncLessons = () => LESSONS.forEach(l => {
+    if (!l.ru) l.ru = { title: l.title, tag: l.tag, cards: l.cards, quiz: l.quiz.map(q => ({ q: q.q, o: q.o, e: q.e })) };
+    const e = I18N.lang === 'en' && typeof LESSONS_EN !== 'undefined' && LESSONS_EN[l.id], src = e || l.ru;
+    l.title = src.title; l.tag = src.tag; l.cards = src.cards;
+    l.quiz.forEach((q, i) => { if (src.quiz[i]) { q.q = src.quiz[i].q; q.o = src.quiz[i].o; q.e = src.quiz[i].e; } });
+  });
+  const syncAll = () => { sync(); syncLessons(); };
+  syncAll();
+  return { sync: syncAll, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, reset: () => { ch = null; } };
 })();
