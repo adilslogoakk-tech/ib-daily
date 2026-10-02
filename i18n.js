@@ -78,7 +78,7 @@
     I.lang = l; I.loc = LOC[l];
     document.documentElement.lang = l;
     try { localStorage.setItem('ibdaily.lang', l); } catch (e) {}
-    if (window.LIB) LIB.sync();
+    if (typeof LIB !== 'undefined') LIB.sync();
     walk(document.body);
   }
   I.tr = tr; I.set = set; I.list = Object.keys(LOC);
