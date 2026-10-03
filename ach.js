@@ -75,6 +75,12 @@ const ACH = (() => {
 })();
 
 I18N.add([
+  ['Порядок добавления', 'Date added', 'Hinzugefügt', 'Əlavə olunma sırası'],
+  ['Название', 'Title', 'Titel', 'Ad'],
+  ['Автор', 'Author', 'Autor', 'Müəllif'],
+  ['Время чтения', 'Reading time', 'Lesezeit', 'Oxuma vaxtı'],
+  ['Части', 'Parts', 'Teile', 'Hissələr'],
+  ['Мой прогресс', 'My progress', 'Mein Fortschritt', 'Mənim irəliləyişim'],
   ['❝ В заметки', '❝ Save quote', '❝ Als Zitat speichern', '❝ Sitatı saxla'],
   ['✓ В заметках · убрать', '✓ Saved · remove', '✓ Gespeichert · entfernen', '✓ Saxlanılıb · sil'],
   ['🃏 В карточку', '🃏 Make a card', '🃏 Als Karte', '🃏 Karta et'],

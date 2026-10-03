@@ -12,3 +12,5 @@ PROJECT_BRIEF.*
 deals.json
 jobs_state.json
 jobs_sync.log
+xlsx_backup/
+__pycache__/

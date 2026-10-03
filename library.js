@@ -143,7 +143,13 @@ const LIB = (() => {
     if (BK.open) return bookPage(BK.open);
     if (!BK.idx) return '<div class="card"><p class="small mute" style="margin:0">Загрузка…</p></div>';
     if (!BK.idx.length) return `<div class="card"><p class="small mute" style="margin:0;line-height:1.55">${CLOUD.on ? 'Здесь будут твои книги, разбитые на части по 5 минут чтения. Отправь мне EPUB в Claude Code, и я добавлю книгу сюда.' : 'Книги хранятся в твоём облаке. Войди в аккаунт в настройках, чтобы увидеть их.'}</p></div>`;
-    return BK.idx.map(b => { const done = Array.from({ length: b.parts }, (_, i) => bpct(b.id, i) === 100).filter(Boolean).length;
+    const so = S.bsort || { k: 'new', d: -1 }, str = k => k === 'title' || k === 'author';
+    const rows = BK.idx.map((b, i) => ({ b, i, done: Array.from({ length: b.parts }, (_, j) => bpct(b.id, j) === 100).filter(Boolean).length }));
+    const val = r => ({ new: -r.i, title: r.b.title, author: r.b.author || '', mins: r.b.mins, parts: r.b.parts, pct: r.done / r.b.parts }[so.k]);
+    rows.sort((x, y) => (str(so.k) ? String(val(x)).localeCompare(String(val(y)), undefined, { sensitivity: 'base' }) : val(x) - val(y)) * so.d || x.i - y.i);
+    const SORTS = [['new', 'Порядок добавления'], ['title', 'Название'], ['author', 'Автор'], ['mins', 'Время чтения'], ['parts', 'Части'], ['pct', 'Мой прогресс']];
+    const bar = `<div class="chips">${SORTS.map(([k, t]) => `<button class="chip ${so.k === k ? 'on' : ''}" data-act="bksort" data-k="${k}"><span>${t}</span>${so.k === k ? (so.d > 0 ? ' ↑' : ' ↓') : ''}</button>`).join('')}</div>`;
+    return bar + rows.map(({ b, done }) => {
       return `<div class="card" data-act="bkopen" data-id="${b.id}" style="cursor:pointer"><div class="tag">${b.mins} мин · ${b.parts} частей</div><div style="font-weight:600;margin:4px 0 2px;line-height:1.35" translate="no">${esc(b.title)}</div>${b.author ? `<div class="small mute" translate="no">${esc(b.author)}</div>` : ''}<div class="bar" style="margin:10px 0 4px"><i style="width:${Math.round(done / b.parts * 100)}%"></i></div><div class="small mute">${done} из ${b.parts} прочитано</div></div>`; }).join('');
   }
   function bookPage(id) {
@@ -214,6 +220,7 @@ const LIB = (() => {
       case 'qcard': qcard(); return true;
       case 'qmk': qmk(); return true;
       case 'qclose': qbar(false); return true;
+      case 'bksort': { const o = S.bsort || { k: 'new', d: -1 }; S.bsort = o.k === D.k ? { k: o.k, d: -o.d } : { k: D.k, d: D.k === 'title' || D.k === 'author' ? 1 : -1 }; save(); render(); return true; }
       case 'bkopen': BK.open = D.id; BK.dir = 'push'; render(); return true;
       case 'bkback': BK.open = null; BK.dir = 'pull'; render(); return true;
       case 'readclose': qbar(false); ch = null; render(); window.scrollTo(0, 0); return true;
