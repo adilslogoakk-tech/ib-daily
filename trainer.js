@@ -115,7 +115,7 @@ function evBoost(topic) {
 function pick(kind, n, topic, misc, whyText, evId) {
   const now = Date.now();
   const ts = topic ? [].concat(topic) : null, narrow = !!(ts || misc);
-  const sc = Object.values(ITEMS).filter(x => x.kind === kind && (!ts || ts.includes(x.topic) || (evId && x.for === evId)) && (!misc || (x.mis && Object.values(x.mis).includes(misc)))).map(x => {
+  const sc = Object.values(ITEMS).filter(x => x.kind === kind && (x.topic !== 'cfa' || (ts && ts.includes('cfa')) || S.focus.includes('cfa')) && (!ts || ts.includes(x.topic) || (evId && x.for === evId)) && (!misc || (x.mis && Object.values(x.mis).includes(misc)))).map(x => {
     const st = S.items[x.id], t = S.topics[x.topic], imp = TOPICS[x.topic].w / 3 * (S.focus.includes(x.topic) ? 1.5 : 1) * evBoost(x.topic);
     const weak = 1.5 * (1 - mastery(t)) * imp;
     let due = 0, nov = 0, rw = 0;
@@ -139,7 +139,7 @@ function pick(kind, n, topic, misc, whyText, evId) {
 }
 // следующий урок: непройденные по порядку, но слабые темы вперёд; когда всё пройдено, повторяем самую слабую тему
 function nextLesson() {
-  const left = LESSONS.filter(l => !S.lessons.includes(l.id)), list = left.length ? left : LESSONS;
+  const ib = LESSONS.filter(l => lessonTopic(l) !== 'cfa' || S.focus.includes('cfa')), left = ib.filter(l => !S.lessons.includes(l.id)), list = left.length ? left : ib;
   return list.map((l, i) => { const k = lessonTopic(l); return { l, v: (1 - mastery(S.topics[k])) * TOPICS[k].w - i * 0.001 }; }).sort((a, b) => b.v - a.v)[0].l;
 }
 const weakest = () => Object.entries(S.topics).filter(([, t]) => t.n >= 3).map(([k, t]) => ({ k, n: t.n, k100: Math.round(know(t) * 100), sp: t.sp, m: mastery(t) })).sort((a, b) => a.m - b.m)[0];

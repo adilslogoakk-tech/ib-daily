@@ -3,7 +3,7 @@ const TOPICS = {
   acct: { name: 'Бухучёт и отчётность', w: 3 }, ev: { name: 'EV и Equity Value', w: 3 }, mult: { name: 'Мультипликаторы', w: 3 },
   dcf: { name: 'DCF и денежные потоки', w: 3 }, wacc: { name: 'WACC и CAPM', w: 3 }, tvm: { name: 'Дисконтирование и доходность', w: 2 },
   comps: { name: 'Comps и методы оценки', w: 2 }, dilution: { name: 'Разводнение акций', w: 1 }, ma: { name: 'M&A и accretion/dilution', w: 3 },
-  lbo: { name: 'LBO', w: 3 }, credit: { name: 'Долг и структура капитала', w: 2 }, markets: { name: 'Рынки, ECM и DCM', w: 2 }, career: { name: 'Интервью и карьера', w: 2 },
+  lbo: { name: 'LBO', w: 3 }, credit: { name: 'Долг и структура капитала', w: 2 }, markets: { name: 'Рынки, ECM и DCM', w: 2 }, cfa: { name: 'CFA Level 1', w: 1 }, career: { name: 'Интервью и карьера', w: 2 },
 };
 const LESSON_TOPIC = {
   ev: 'ev', mult: 'mult', dcf: 'dcf', wacc: 'wacc', fs: 'acct', comps: 'comps', ad: 'ma', lbo: 'lbo', wc: 'dcf',

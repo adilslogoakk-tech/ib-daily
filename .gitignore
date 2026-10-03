@@ -9,3 +9,4 @@ sync_jobs.py
 .claude/
 *.bak
 PROJECT_BRIEF.*
+deals.json

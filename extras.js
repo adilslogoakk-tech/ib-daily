@@ -288,16 +288,73 @@ const XT = (() => {
     <div class="grid2"><button class="btn ghost" data-act="netcopy">Скопировать</button><button class="btn ghost" data-act="netclose">Закрыть</button></div></div>` : ''}`;
   }
 
+
+
+  // ===================== сделки недели (новости) =====================
+  const dl = { data: null, open: null, loading: false };
+  const dealsCache = () => { try { return JSON.parse(localStorage.getItem('ibdaily.deals')); } catch (e) { return null; } };
+  function dealsInner() {
+    const d = dl.data || dealsCache(); if (!d || !d.items || !d.items.length) return '';
+    return `<h2>Сделки недели</h2><p class="sub" style="margin:-6px 0 8px" translate="no">${esc(d.title || '')}</p>` + d.items.map(x => {
+      const o = dl.open === x.id;
+      return `<div class="goal" style="display:block;border-bottom:1px solid var(--line);padding:12px 0"><div class="small mute" translate="no">${esc(x.sector || '')}${x.date ? ' · ' + esc(x.date) : ''}</div><div style="font-weight:600;line-height:1.35;margin:2px 0" translate="no">${esc(x.title)}</div>
+      <div class="small" translate="no"><b>${esc(x.value || '')}</b> · ${esc(x.type || '')}</div><p class="small" style="margin:6px 0;line-height:1.5" translate="no">${esc(x.why || '')}</p>
+      ${o ? `<div class="explain" translate="no"><b>${esc(x.q || '')}</b><p style="margin:8px 0 0;line-height:1.5">${esc(x.a || '')}</p>${x.src ? `<p class="small" style="margin:8px 0 0"><a href="${esc(x.src)}" target="_blank" rel="noopener">Источник ↗</a></p>` : ''}</div>` : ''}
+      <button class="st ${o ? 'on' : ''}" data-act="dealtgl" data-id="${esc(x.id)}">${o ? 'Скрыть разбор' : 'Как оценить?'}</button></div>`;
+    }).join('');
+  }
+  const dealsCard = () => { const h = dealsInner(); return `<div class="card" id="dealsbox" ${h ? '' : 'hidden'}>${h}</div>`; };
+  const dealsPaint = () => { const el = document.getElementById('dealsbox'); if (!el) return; const h = dealsInner(); el.innerHTML = h; el.hidden = !h; };
+  async function dealsLoad() {
+    if (dl.loading) return; dl.loading = true;
+    try {
+      const d = await loadDoc('deals', 'deals.json');
+      if (d && d.items) { dl.data = d; localStorage.setItem('ibdaily.deals', JSON.stringify(d)); dealsPaint(); }
+    } catch (e) {} finally { dl.loading = false; }
+  }
+
+  // ===================== уведомления и значок на иконке =====================
+  const b64u = b => Uint8Array.from(atob((b + '='.repeat((4 - b.length % 4) % 4)).replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+  const pushOk = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  function pending() {
+    let n = 0; try { n = Math.max(0, STEPS.length - today().steps.length) + Math.max(0, DAILY_APPS - appsToday()) + FX.fu.due().length + dueList().length; } catch (e) {}
+    return n;
+  }
+  function badge() { try { if (!pushOk() || Notification.permission !== 'granted' || !navigator.setAppBadge) return; const n = pending(); if (n) navigator.setAppBadge(n); else navigator.clearAppBadge(); } catch (e) {} }
+  async function pushOn() {
+    if (!pushOk()) return toast('Уведомления доступны, когда приложение открыто с экрана «Домой» (iOS 16.4 и новее)');
+    try {
+      if (await Notification.requestPermission() !== 'granted') return toast('Разрешение не выдано');
+      const reg = await navigator.serviceWorker.ready;
+      const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(SB_CONFIG.vapid) });
+      S.push = { sub: sub.toJSON(), at: Date.now() }; save(); T.track('push_on', {}); toast('Уведомления включены'); render(); badge();
+    } catch (e) { toast('Не удалось включить уведомления'); }
+  }
+  async function pushOff() {
+    try { const reg = await navigator.serviceWorker.ready, sub = await reg.pushManager.getSubscription(); if (sub) await sub.unsubscribe(); } catch (e) {}
+    delete S.push; save(); try { navigator.clearAppBadge(); } catch (e) {} toast('Уведомления выключены'); render();
+  }
+  function pushCard() {
+    const on = !!(S.push && S.push.sub), perm = pushOk() ? Notification.permission : 'na';
+    return `<div class="card"><h2>Уведомления</h2><p class="sub" style="margin-bottom:10px">Напоминание в ${esc(S.remind)} о плане дня и заявках, а утром о follow-up и контактах. Число дел показывается значком на иконке.</p>
+    ${on ? '<p class="small" style="margin:0 0 8px;color:var(--green)">Включены на этом устройстве</p><button class="btn ghost" data-act="pushoff">Выключить</button>' : perm === 'denied' ? '<p class="small mute" style="margin:0">Доступ запрещён в настройках iPhone. Включи его для Mandate в Настройки → Уведомления.</p>' : '<button class="btn" data-act="pushon">Включить уведомления</button>'}
+    <p class="small mute" style="margin:10px 0 0;line-height:1.5">Уведомления отправляет твой компьютер по расписанию, поэтому он должен быть включён. Работает только в приложении, добавленном на экран «Домой».</p></div>`;
+  }
+
   // ===================== карточки на экране «Учёба» =====================
   function learnCards() {
     const cs = S.cases || {};
     return `<div class="card"><div class="row sp"><div style="flex:1;min-width:0"><div style="font-weight:600">⚡ Ментальная математика</div><div class="small mute" style="line-height:1.45;margin-top:2px">${mmStats()}</div></div></div><button class="btn" data-act="mmstart">Начать серию</button></div>
+    <div class="card"><div class="tag" style="margin-bottom:4px">CFA Level 1</div><p class="small mute" style="margin:0 0 6px;line-height:1.45">Отдельная ветка на английском, как на экзамене: 6 уроков, 36 задач, 10 карточек.</p>${LESSONS.filter(l => l.topic === 'cfa').map(l => `<div class="goal" data-lesson="${l.id}" style="cursor:pointer;align-items:center"><div class="chk" style="${S.lessons.includes(l.id) ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${S.lessons.includes(l.id) ? '✓' : ''}</div><div style="font-weight:600;line-height:1.3" translate="no">${esc(l.title)}</div></div>`).join('')}<div class="grid2" style="margin-top:10px"><button class="btn ghost" style="margin:0" data-start="drill-topic" data-topic="cfa">Задачи CFA</button><button class="btn ghost" style="margin:0" data-focus="cfa">${S.focus.includes('cfa') ? '✓ В ежедневном плане' : 'В ежедневный план'}</button></div></div>
     <div class="card"><div class="tag" style="margin-bottom:4px">Мини-кейсы</div>${CASES.map(c => `<div class="goal" data-act="castart" data-id="${c.id}" style="cursor:pointer;align-items:center"><div class="chk" style="${cs[c.id] && cs[c.id].done ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${cs[c.id] && cs[c.id].done ? '✓' : ''}</div><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3" translate="no">${esc(lg(c.t))}</div><div class="small mute">${c.steps.length} шага${cs[c.id] && cs[c.id].done ? ' · лучший результат ' + cs[c.id].ok + ' из ' + cs[c.id].n : ''}</div></div></div>`).join('')}</div>`;
   }
 
   // ===================== действия =====================
   function act(a, D) {
     switch (a) {
+      case 'dealtgl': dl.open = dl.open === D.id ? null : D.id; dealsPaint(); return true;
+      case 'pushon': pushOn(); return true;
+      case 'pushoff': pushOff(); return true;
       case 'srchopen': srOpen(); return true;
       case 'srclose': srClose(); return true;
       case 'srgo': srGo(D.k, D.r); return true;
@@ -348,11 +405,35 @@ const XT = (() => {
   const refocus = () => { const el = document.getElementById('mmin') || document.getElementById('cain'); if (el && !el.disabled && document.activeElement !== el) el.focus(); };
   new MutationObserver(() => { try { if (sess && (sess.type === 'mm' || sess.type === 'case')) refocus(); } catch (e) {} }).observe(document.body, { childList: true, subtree: true });   // sess ещё может быть недоступна, пока не загрузился app.js
 
-  return { act, stop, quickCard, quickFinish, mmHtml, caseHtml, netHtml, netCard, netProgress, learnCards, analyticsHtml, letterBtn, letterHtml };
+  return { act, stop, badge, dealsCard, dealsLoad, pushCard, quickCard, quickFinish, mmHtml, caseHtml, netHtml, netCard, netProgress, learnCards, analyticsHtml, letterBtn, letterHtml };
 })();
 
 // строки интерфейса этого модуля: русский оригинал → en, de, az
 I18N.add([
+  ['«Авто» следует за темой iPhone.', 'Auto follows the iPhone theme.', 'Auto folgt dem iPhone-Design.', '«Avto» iPhone mövzusunu izləyir.'],
+  ['Заявок осталось: {0}.', 'Applications left: {0}.', 'Offene Bewerbungen: {0}.', 'Qalan müraciət: {0}.'],
+  ['Шагов обучения: {0}. Заявок осталось: {1}.', 'Learning steps left: {0}. Applications left: {1}.', 'Offene Lernschritte: {0}. Offene Bewerbungen: {1}.', 'Qalan təlim addımları: {0}. Qalan müraciət: {1}.'],
+  ['CFA Level 1', 'CFA Level 1', 'CFA Level 1', 'CFA Level 1'],
+  ['Отдельная ветка на английском, как на экзамене: 6 уроков, 36 задач, 10 карточек.', 'A separate track in English, as on the exam: 6 lessons, 36 exercises, 10 cards.', 'Ein eigener Strang auf Englisch wie in der Prüfung: 6 Lektionen, 36 Aufgaben, 10 Karten.', 'İmtahandakı kimi ingilis dilində ayrıca xətt: 6 dərs, 36 tapşırıq, 10 kart.'],
+  ['Задачи CFA', 'CFA exercises', 'CFA-Aufgaben', 'CFA tapşırıqları'],
+  ['✓ В ежедневном плане', '✓ In the daily plan', '✓ Im Tagesplan', '✓ Gündəlik plandadır'],
+  ['В ежедневный план', 'Add to the daily plan', 'In den Tagesplan aufnehmen', 'Gündəlik plana əlavə et'],
+  ['Сделки недели', 'Deals of the week', 'Deals der Woche', 'Həftənin sövdələşmələri'],
+  ['Как оценить?', 'How to value it?', 'Wie bewertet man das?', 'Necə qiymətləndirmək olar?'],
+  ['Скрыть разбор', 'Hide the analysis', 'Analyse ausblenden', 'Təhlili gizlət'],
+  ['Источник ↗', 'Source ↗', 'Quelle ↗', 'Mənbə ↗'],
+  ['Уведомления доступны, когда приложение открыто с экрана «Домой» (iOS 16.4 и новее)', 'Notifications work when the app is opened from the Home Screen (iOS 16.4 or newer)', 'Benachrichtigungen funktionieren, wenn die App vom Home-Bildschirm geöffnet wird (iOS 16.4 oder neuer)', 'Bildirişlər tətbiq «Ev» ekranından açıldıqda işləyir (iOS 16.4 və yuxarı)'],
+  ['Разрешение не выдано', 'Permission not granted', 'Berechtigung nicht erteilt', 'İcazə verilmədi'],
+  ['Уведомления включены', 'Notifications turned on', 'Benachrichtigungen aktiviert', 'Bildirişlər aktiv edildi'],
+  ['Уведомления выключены', 'Notifications turned off', 'Benachrichtigungen deaktiviert', 'Bildirişlər söndürüldü'],
+  ['Не удалось включить уведомления', 'Could not turn on notifications', 'Benachrichtigungen konnten nicht aktiviert werden', 'Bildirişləri aktiv etmək alınmadı'],
+  ['Уведомления', 'Notifications', 'Benachrichtigungen', 'Bildirişlər'],
+  ['Напоминание в {0} о плане дня и заявках, а утром о follow-up и контактах. Число дел показывается значком на иконке.', 'A reminder at {0} about the daily plan and applications, and in the morning about follow-ups and contacts. The number of open tasks shows as a badge on the icon.', 'Eine Erinnerung um {0} an Tagesplan und Bewerbungen, morgens an Nachfragen und Kontakte. Die Zahl offener Aufgaben erscheint als Badge am Symbol.', 'Saat {0}-da gün planı və müraciətlər, səhər isə follow-up və əlaqələr barədə xatırlatma. Açıq işlərin sayı ikonada nişan kimi görünür.'],
+  ['Включены на этом устройстве', 'Turned on for this device', 'Auf diesem Gerät aktiviert', 'Bu cihazda aktivdir'],
+  ['Выключить', 'Turn off', 'Ausschalten', 'Söndür'],
+  ['Доступ запрещён в настройках iPhone. Включи его для Mandate в Настройки → Уведомления.', 'Access is blocked in iPhone settings. Allow it for Mandate under Settings → Notifications.', 'Der Zugriff ist in den iPhone-Einstellungen gesperrt. Erlaube ihn für Mandate unter Einstellungen → Mitteilungen.', 'İcazə iPhone ayarlarında bloklanıb. Ayarlar → Bildirişlər bölməsində Mandate üçün aç.'],
+  ['Включить уведомления', 'Turn on notifications', 'Benachrichtigungen aktivieren', 'Bildirişləri aktiv et'],
+  ['Уведомления отправляет твой компьютер по расписанию, поэтому он должен быть включён. Работает только в приложении, добавленном на экран «Домой».', 'Notifications are sent by your computer on a schedule, so it must be on. They only work in the app added to the Home Screen.', 'Die Benachrichtigungen sendet dein Computer nach Zeitplan, er muss also eingeschaltet sein. Sie funktionieren nur in der App auf dem Home-Bildschirm.', 'Bildirişləri kompüterin cədvəl üzrə göndərir, ona görə o açıq olmalıdır. Yalnız «Ev» ekranına əlavə olunmuş tətbiqdə işləyir.'],
   ['Ищи термины, уроки, главы, задачи, вакансии и свои книги', 'Search terms, lessons, chapters, exercises, jobs and your books', 'Suche nach Begriffen, Lektionen, Kapiteln, Aufgaben, Stellen und deinen Büchern', 'Terminləri, dərsləri, fəsilləri, tapşırıqları, vakansiyaları və kitablarınızı axtarın'],
   ['Ничего не найдено', 'Nothing found', 'Nichts gefunden', 'Heç nə tapılmadı'],
   ['Поиск по всему приложению', 'Search the whole app', 'Die ganze App durchsuchen', 'Bütün tətbiqdə axtarış'],

@@ -217,14 +217,14 @@ function render() {
   const enter = key !== lastKey; lastKey = key;
   const app = $('#app');
   app.innerHTML = (sess || tab === 'settings' || (tab === 'book' && LIB.cur()) ? '' : `<button class="avatar srchb" data-act="srchopen" aria-label="Поиск">🔍</button><button class="avatar" data-go="settings" aria-label="Профиль и настройки"${avStyle()}>${avInner()}</button>`) + (sess ? views[sess.type]() : views[tab]());
-  if (!sess && tab === 'news') loadNews();
+  if (!sess && tab === 'news') { loadNews(); XT.dealsLoad(); }
   if (!enter) app.classList.remove('enter'); else if (!booting && animOn()) enterView();
   // переключение внутри экрана (Позже / Главы / Книги, язык): плавно показываем только содержимое под переключателем
   const sub = (tab === 'book' ? LIB.sub() : '') + '|' + I18N.lang;
   if (!enter && sub !== lastSub && !booting && animOn()) { app.classList.remove('sub'); void app.offsetWidth; app.classList.add('sub'); clearTimeout(subT); subT = setTimeout(() => app.classList.remove('sub'), 300); }
   lastSub = sub;
   if (document.getElementById('weekbox')) FX.week.fill();
-  T.onRender();
+  T.onRender(); XT.badge();
 }
 
 // ---------- экраны ----------
@@ -263,17 +263,19 @@ views.mm = () => XT.mmHtml();
 views.case = () => XT.caseHtml();
 views.net = () => XT.netHtml();
 views.book = () => LIB.html();
+const IBL = () => LESSONS.filter(l => l.topic !== 'cfa');
 views.learn = () => `
-  <div class="tag">Учёба</div><h1>Концепции</h1><p class="sub">${S.lessons.length} из ${LESSONS.length} уроков пройдено · ${DRILLS.length} задач · ${CARDS.length} карточек</p>${S.lessons.length >= LESSONS.length ? '<div class="card banner"><b>Все уроки пройдены</b><p class="sub" style="color:var(--mute)">Дальше идёт повторение. Новые уроки добавим позже.</p></div>' : ''}
+  <div class="tag">Учёба</div><h1>Концепции</h1><p class="sub">${IBL().filter(l => S.lessons.includes(l.id)).length} из ${IBL().length} уроков пройдено · ${DRILLS.filter(d => d.topic !== 'cfa').length} задач · ${CARDS.filter(c => c.topic !== 'cfa').length} карточек</p>${IBL().every(l => S.lessons.includes(l.id)) ? '<div class="card banner"><b>Все уроки пройдены</b><p class="sub" style="color:var(--mute)">Дальше идёт повторение. Новые уроки добавим позже.</p></div>' : ''}
   <div class="grid2" style="margin-top:14px"><button class="btn ghost" style="margin:0" data-start="drill-free">🧮 Задачи</button><button class="btn ghost" style="margin:0" data-start="cards">🃏 Карточки</button></div>
   <button class="btn" style="margin-top:10px" data-start="interview">🎤 Режим собеседования</button>
   ${XT.learnCards()}
   <div class="card"><div class="tag" style="margin-bottom:8px">Цветовая карта терминов</div><div class="legend">${Object.entries(CATS).map(([k, c]) => `<span class="k k-${k}">${c.ic} ${c.name}</span>`).join('')}</div><p class="small mute" style="margin:10px 0 0">Один цвет — одна группа понятий. Запоминай по цвету.</p></div>
-  <div class="card" style="padding:6px 16px">${LESSONS.map(l => `<div class="goal" data-lesson="${l.id}" style="cursor:pointer;align-items:center;border-left:3px solid var(--c-${l.cat || LESSON_CAT[l.id] || 'val'});padding-left:12px"><div class="chk" style="${S.lessons.includes(l.id) ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${S.lessons.includes(l.id) ? '✓' : ''}</div><div><div class="tag">${l.tag}</div><div style="font-weight:600">${l.title}</div></div></div>`).join('')}</div>`;
+  <div class="card" style="padding:6px 16px">${IBL().map(l => `<div class="goal" data-lesson="${l.id}" style="cursor:pointer;align-items:center;border-left:3px solid var(--c-${l.cat || LESSON_CAT[l.id] || 'val'});padding-left:12px"><div class="chk" style="${S.lessons.includes(l.id) ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${S.lessons.includes(l.id) ? '✓' : ''}</div><div><div class="tag">${l.tag}</div><div style="font-weight:600">${l.title}</div></div></div>`).join('')}</div>`;
 
 views.news = () => `
   <div class="tag">Рынок</div><h1>Новости и данные</h1><p class="sub" id="newsmeta"></p>
   <div class="card"><div class="ticker" id="fx"><span class="small mute">Загрузка…</span></div></div>
+  ${XT.dealsCard()}
   <div class="card" id="newslist"><span class="small mute">Загрузка…</span></div>
   <button class="btn ghost" data-act="newsdone" ${done('news') ? 'disabled' : ''}>${done('news') ? '✓ Шаг засчитан' : 'Я прочитал(а) — засчитать шаг'}</button>
   <div class="card"><div class="tag">Подумай</div><p style="margin:6px 0 0;line-height:1.5">Выбери одну новость: как она влияет на оценку компании — через денежные потоки, WACC или мультипликатор?</p></div>`;
@@ -415,6 +417,7 @@ views.settings = () => {
   <div class="card"><label class="switch"><div><b>Анимации</b><div class="small mute">Переходы, заставка, конфетти</div></div><input type="checkbox" class="tg" id="anim" ${S.anim === false ? '' : 'checked'}></label></div>
   <div class="card"><h2>Напоминание</h2><p class="sub" style="margin-bottom:10px">Добавь ежедневное напоминание в Календарь iPhone. Оно будет приходить даже когда приложение закрыто.</p>
   <input type="time" id="rt" value="${S.remind}"><button class="btn" data-act="ics">📅 Добавить в Календарь</button></div>
+  ${XT.pushCard()}
   <div class="card"><h2>Облако и данные</h2>
   <p class="small" style="margin:0 0 6px"><b>${CLOUD.on ? 'Облако: ' + esc(CLOUD.email) : CLOUD.enabled ? 'Облако отключено' : 'Облако не настроено'}</b>${CLOUD.on ? ' · ' + (CLOUD.info.err ? '<span style="color:var(--red)">ошибка синхронизации</span>' : CLOUD.info.at ? 'синхронизировано ' + new Date(CLOUD.info.at).toLocaleTimeString(I18N.loc, { hour: '2-digit', minute: '2-digit' }) : 'ожидание') : ''}</p>
   ${CLOUD.on ? '<button class="btn ghost" data-act="syncnow">Синхронизировать сейчас</button><button class="btn ghost" data-act="logout">Выйти из облака</button>' : CLOUD.enabled ? '<button class="btn ghost" data-act="gologin">Войти в облако</button>' : ''}
