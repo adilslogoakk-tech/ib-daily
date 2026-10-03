@@ -63,7 +63,7 @@ const LIB = (() => {
     const w = document.createElement('div'); w.id = 'sheet';
     w.innerHTML = `<div class="sh-bg" data-act="sheetclose"></div><div class="sh"><div class="grab"></div>
       <div class="row sp"><span class="k k-${g.c}">${CATS[g.c].ic} ${CATS[g.c].name}</span><button class="pill" data-act="sheetclose">✕</button></div>
-      <h3 style="margin:12px 0 6px;font-size:20px">${esc(g.t)}</h3><p style="margin:0;line-height:1.55">${esc(g.d)}</p>${g.f ? `<div class="fml">${esc(g.f)}</div>` : ''}
+      <h3 style="margin:12px 0 6px;font-size:20px">${esc(g.t)}</h3><p style="margin:0;line-height:1.55">${esc(g.d)}</p>${g.f ? `<div class="fml">${esc(g.f)}</div>` : ''}${typeof DEU !== 'undefined' ? DEU.termLine(g.k) : ''}
       <div class="grid2" style="margin-top:14px">${g.a && chap(g.a) ? `<button class="btn" style="margin:0" data-act="readterm" data-a="${g.a}">📖 Читать подробно</button>` : '<span></span>'}${btn('term', key, 'Сохранить')}</div></div>`;
     document.body.append(w); requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('open')));
   }

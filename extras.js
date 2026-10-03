@@ -17,8 +17,8 @@ const XT = (() => {
 
   // ===================== поиск =====================
   const sr = { q: '', open: null };
-  const KINDS = { term: ['📖', 'Термин'], lesson: ['📘', 'Урок'], chapter: ['📚', 'Глава'], part: ['📗', 'Моя книга'], drill: ['🧮', 'Задача'], card: ['🃏', 'Карточка'], job: ['💼', 'Вакансия'] };
-  const KORDER = ['term', 'lesson', 'chapter', 'part', 'drill', 'card', 'job'], KW = { term: 6, lesson: 4, chapter: 3, part: 2, job: 3 };
+  const KINDS = { term: ['📖', 'Термин'], lesson: ['📘', 'Урок'], chapter: ['📚', 'Глава'], part: ['📗', 'Моя книга'], drill: ['🧮', 'Задача'], card: ['🃏', 'Карточка'], job: ['💼', 'Вакансия'], vocab: ['🇩🇪', 'Немецкий'] };
+  const KORDER = ['term', 'vocab', 'lesson', 'chapter', 'part', 'drill', 'card', 'job'], KW = { term: 6, lesson: 4, chapter: 3, part: 2, job: 3 };
   let idx = null, idxKey = '';
   function buildIndex() {
     const bk = LIB.bookData(), key = I18N.lang + ':' + Object.keys(bk.docs).join() + ':' + JOBS.jobs.length;
@@ -29,6 +29,7 @@ const XT = (() => {
     BOOK.forEach(c => add('chapter', c.title, [c.tag, c.intro || '', ...c.blocks.map(flat)].join(' '), c.id));
     DRILLS.forEach((d, i) => add('drill', d.q, (d.e || '') + ' ' + d.o.join(' '), i));
     CARDS.forEach((c, i) => add('card', c.q, c.a, i));
+    DEU.words().forEach(w => add('vocab', w.de, [w.en, w.ru, w.az, w.ex].join(' '), w.i));
     JOBS.jobs.forEach(j => add('job', j.title, [j.company, j.location, j.category].join(' '), j.id, j.company));
     Object.values(bk.docs).forEach(d => d.parts.forEach((p, i) => add('part', p.t, p.blocks.map(b => b[1]).join(' '), d.id + '|' + i, d.title)));
     return (idx = out);
@@ -52,6 +53,7 @@ const XT = (() => {
         const key = it.kind + ':' + it.ref, open = sr.open === key;
         let more = '';
         if (open && it.kind === 'drill') { const d = DRILLS[it.ref]; more = `<div class="srmore">${d.o.map((o, i) => `<div class="${i === d.a ? 'okk' : ''}">${i === d.a ? '✓ ' : ''}${esc(o)}</div>`).join('')}${d.e ? `<p class="small" style="margin:8px 0 0">${esc(d.e)}</p>` : ''}</div>`; }
+        if (open && it.kind === 'vocab') more = DEU.detail(DEU.byId[it.ref]);
         if (open && it.kind === 'card') more = `<div class="srmore"><p style="margin:0;line-height:1.5">${esc(CARDS[it.ref].a)}</p></div>`;
         return `<div class="card sres" data-act="srgo" data-k="${it.kind}" data-r="${esc(it.ref)}"><div class="srt" ${it.kind === 'part' || it.kind === 'job' ? 'translate="no"' : ''}>${mark(it.title, terms)}</div>${it.sub ? `<div class="small mute" translate="no">${esc(it.sub)}</div>` : ''}${open ? '' : `<div class="small mute" style="line-height:1.45;margin-top:3px" translate="no">${snippet(it, terms)}</div>`}${more}</div>`;
       }).join('');
@@ -68,7 +70,7 @@ const XT = (() => {
   const srRefresh = () => { const r = document.getElementById('srr'); if (r) r.innerHTML = results(); };
   function srClose() { const w = document.getElementById('srch'); if (w) w.remove(); document.body.style.overflow = ''; }
   function srGo(kind, ref) {
-    if (kind === 'drill' || kind === 'card') { const k = kind + ':' + ref; sr.open = sr.open === k ? null : k; return srRefresh(); }
+    if (kind === 'drill' || kind === 'card' || kind === 'vocab') { const k = kind + ':' + ref; sr.open = sr.open === k ? null : k; return srRefresh(); }
     srClose();
     if (kind === 'term') LIB.openTerm(ref);
     else if (kind === 'lesson') startLesson(ref);
@@ -410,6 +412,7 @@ const XT = (() => {
 
 // строки интерфейса этого модуля: русский оригинал → en, de, az
 I18N.add([
+  ['Немецкий', 'German', 'Deutsch', 'Alman dili'],
   ['«Авто» следует за темой iPhone.', 'Auto follows the iPhone theme.', 'Auto folgt dem iPhone-Design.', '«Avto» iPhone mövzusunu izləyir.'],
   ['Заявок осталось: {0}.', 'Applications left: {0}.', 'Offene Bewerbungen: {0}.', 'Qalan müraciət: {0}.'],
   ['Шагов обучения: {0}. Заявок осталось: {1}.', 'Learning steps left: {0}. Applications left: {1}.', 'Offene Lernschritte: {0}. Offene Bewerbungen: {1}.', 'Qalan təlim addımları: {0}. Qalan müraciət: {1}.'],

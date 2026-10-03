@@ -213,7 +213,7 @@ function hideSplash() {
 function render() {
   if (CLOUD.enabled && !CLOUD.on && !S.localOnly) { $('#nav').innerHTML = ''; lastNav = ''; $('#app').innerHTML = authHtml(); return; }
   if (lastNav !== tab) { $('#nav').innerHTML = TABS.map(([k, l]) => `<button class="${tab === k || (k === 'goals' && (tab === 'jobs' || tab === 'net')) ? 'on' : ''}" data-go="${k}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${l}</button>`).join(''); lastNav = tab; }
-  const key = sess ? sess.type === 'mm' ? 'mm:' + sess.phase : sess.type === 'case' ? 'case:' + (sess.i < 0 ? 'i' : sess.i >= sess.c.steps.length ? 'e' : 'q') : sess.type + ':' + (sess.type === 'lesson' ? (sess.i < sess.l.cards.length ? 'r' + sess.i : 'q' + sess.qi) : (sess.qi ?? sess.i ?? '')) : tab === 'book' ? 'book:' + (LIB.cur() || '') : tab;
+  const key = sess ? sess.type === 'mm' ? 'mm:' + sess.phase : sess.type === 'de' ? 'de:' + sess.mode : sess.type === 'case' ? 'case:' + (sess.i < 0 ? 'i' : sess.i >= sess.c.steps.length ? 'e' : 'q') : sess.type + ':' + (sess.type === 'lesson' ? (sess.i < sess.l.cards.length ? 'r' + sess.i : 'q' + sess.qi) : (sess.qi ?? sess.i ?? '')) : tab === 'book' ? 'book:' + (LIB.cur() || '') : tab;
   const enter = key !== lastKey; lastKey = key;
   const app = $('#app');
   app.innerHTML = (sess || tab === 'settings' || (tab === 'book' && LIB.cur()) ? '' : `<button class="avatar srchb" data-act="srchopen" aria-label="Поиск">🔍</button><button class="avatar" data-go="settings" aria-label="Профиль и настройки"${avStyle()}>${avInner()}</button>`) + (sess ? views[sess.type]() : views[tab]());
@@ -262,12 +262,14 @@ views.interview = () => FX.iv.html();
 views.mm = () => XT.mmHtml();
 views.case = () => XT.caseHtml();
 views.net = () => XT.netHtml();
+views.de = () => DEU.html();
 views.book = () => LIB.html();
-const IBL = () => LESSONS.filter(l => l.topic !== 'cfa');
+const IBL = () => LESSONS.filter(l => !['cfa', 'de'].includes(l.topic));
 views.learn = () => `
-  <div class="tag">Учёба</div><h1>Концепции</h1><p class="sub">${IBL().filter(l => S.lessons.includes(l.id)).length} из ${IBL().length} уроков пройдено · ${DRILLS.filter(d => d.topic !== 'cfa').length} задач · ${CARDS.filter(c => c.topic !== 'cfa').length} карточек</p>${IBL().every(l => S.lessons.includes(l.id)) ? '<div class="card banner"><b>Все уроки пройдены</b><p class="sub" style="color:var(--mute)">Дальше идёт повторение. Новые уроки добавим позже.</p></div>' : ''}
+  <div class="tag">Учёба</div><h1>Концепции</h1><p class="sub">${IBL().filter(l => S.lessons.includes(l.id)).length} из ${IBL().length} уроков пройдено · ${DRILLS.filter(d => !['cfa', 'de'].includes(d.topic)).length} задач · ${CARDS.filter(c => !['cfa', 'de'].includes(c.topic)).length} карточек</p>${IBL().every(l => S.lessons.includes(l.id)) ? '<div class="card banner"><b>Все уроки пройдены</b><p class="sub" style="color:var(--mute)">Дальше идёт повторение. Новые уроки добавим позже.</p></div>' : ''}
   <div class="grid2" style="margin-top:14px"><button class="btn ghost" style="margin:0" data-start="drill-free">🧮 Задачи</button><button class="btn ghost" style="margin:0" data-start="cards">🃏 Карточки</button></div>
   <button class="btn" style="margin-top:10px" data-start="interview">🎤 Режим собеседования</button>
+  ${DEU.learnCard()}
   ${XT.learnCards()}
   <div class="card"><div class="tag" style="margin-bottom:8px">Цветовая карта терминов</div><div class="legend">${Object.entries(CATS).map(([k, c]) => `<span class="k k-${k}">${c.ic} ${c.name}</span>`).join('')}</div><p class="small mute" style="margin:10px 0 0">Один цвет — одна группа понятий. Запоминай по цвету.</p></div>
   <div class="card" style="padding:6px 16px">${IBL().map(l => `<div class="goal" data-lesson="${l.id}" style="cursor:pointer;align-items:center;border-left:3px solid var(--c-${l.cat || LESSON_CAT[l.id] || 'val'});padding-left:12px"><div class="chk" style="${S.lessons.includes(l.id) ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${S.lessons.includes(l.id) ? '✓' : ''}</div><div><div class="tag">${l.tag}</div><div style="font-weight:600">${l.title}</div></div></div>`).join('')}</div>`;
@@ -619,7 +621,7 @@ document.addEventListener('click', e => {
     }
     case 'clearlog': if (confirm(tr('Удалить журнал событий? Статистика по темам останется.'))) T.clearLog(); return;
     case 'reset': if (confirm(tr('Удалить весь прогресс?'))) { localStorage.removeItem(KEY); S = load(); save(); render(); } return;
-    default: if (FX.act(D.act, D) || LIB.act(D.act, D) || XT.act(D.act, D)) return;
+    default: if (FX.act(D.act, D) || LIB.act(D.act, D) || XT.act(D.act, D) || DEU.act(D.act, D)) return;
   }
 });
 
