@@ -10,3 +10,5 @@ sync_jobs.py
 *.bak
 PROJECT_BRIEF.*
 deals.json
+jobs_state.json
+jobs_sync.log

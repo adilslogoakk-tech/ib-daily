@@ -186,6 +186,9 @@ input[type=date]::-webkit-calendar-picker-indicator{opacity:.6}
 .book .bt{font-family:var(--sans);font-size:28px;line-height:1.15;margin:6px 0 4px;padding:0}
 .book .bh{font-family:var(--sans);font-size:1.15em;margin:1.6em 0 .5em;color:var(--text)}
 .book ul,.book ol{margin:0 0 1em;padding-left:1.3em}.book li{margin:0 0 .4em}
+.book [data-q]{cursor:pointer}.book .qd{border-left:3px solid var(--gold);padding-left:10px;margin-left:-13px}.book .qs{background:var(--soft);border-radius:8px;box-shadow:0 0 0 6px var(--soft)}
+#qbar{position:fixed;left:12px;right:12px;bottom:calc(78px + env(safe-area-inset-bottom));max-width:536px;margin:0 auto;z-index:70;display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:8px;box-shadow:0 10px 30px var(--shadow)}#qbar .btn{flex:1;padding:12px 8px;font-size:14px}#qbar .pill{flex:none}
+#sheet textarea{width:100%;box-sizing:border-box;font:inherit;font-size:15px;line-height:1.45;background:var(--soft);color:var(--text);border:1px solid var(--line);border-radius:12px;padding:10px;resize:none}
 .bx{margin:1.2em 0;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:var(--soft);font-size:.96em;line-height:1.65}
 .bx p{margin:0 0 .6em}.bx p:last-child{margin:0}
 .bxt{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;color:var(--mute)}
@@ -346,6 +349,7 @@ html[data-anim=off] *,html[data-anim=off] *::before,html[data-anim=off] *::after
 <script src="cases.js"></script>
 <script src="extras.js"></script>
 <script src="deutsch.js"></script>
+<script src="ach.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

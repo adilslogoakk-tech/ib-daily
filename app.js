@@ -27,8 +27,10 @@ let S = load();
 function normalize(s) {
   s = s || { xp: 0, days: {}, lessons: [], boxes: {}, miss: {}, goals: DEFAULT_GOALS, remind: '19:00', best: 0 };
   // значения по умолчанию для полей, добавленных позже (работает и для старых сохранений, и после сброса)
-  for (const [k, v] of Object.entries({ apps: {}, seen: [], items: {}, topics: {}, wrong: {}, focus: [], stats: {}, misc: {}, events: [], requests: [], reqDel: [], later: [], read: {}, pos: {}, contacts: [], cases: {}, mm: {}, cl: {} })) s[k] = s[k] || v;
+  for (const [k, v] of Object.entries({ apps: {}, seen: [], items: {}, topics: {}, wrong: {}, focus: [], stats: {}, misc: {}, events: [], requests: [], reqDel: [], later: [], read: {}, pos: {}, contacts: [], cases: {}, mm: {}, cl: {}, mycards: [], badges: {} })) s[k] = s[k] || v;
   for (const k of ['hour', 'time', 'ms']) s.stats[k] = s.stats[k] || {};
+  // свои карточки из книг попадают в общий набор (и после загрузки состояния из облака)
+  const nc = s.mycards.filter(c => !CARDS.some(y => y.id === c.id)); if (nc.length) { CARDS.push(...nc.map(c => ({ ...c }))); registerAll(); }
   return s;
 }
 function load() {
@@ -41,12 +43,24 @@ function save() { S._u = Date.now(); rawSave(); CLOUD.touch(); }
 const today = () => S.days[dkey()] || (S.days[dkey()] = { steps: [], xp: 0 });
 const done = id => today().steps.includes(id);
 const allDone = (k = dkey()) => (S.days[k]?.steps.length || 0) >= STEPS.length;
-function streak() {
-  let n = 0, d = new Date();
+// понедельник недели, к которой относится день d
+const wkey = d => { const m = new Date(d); m.setDate(m.getDate() - (m.getDay() + 6) % 7); return dkey(m); };
+// «Заморозка»: один пропущенный день в неделю не сбрасывает серию (пропуск не прибавляет дней; два пропуска подряд всё же сбрасывают)
+function streakCalc() {
+  let n = 0, d = new Date(); const used = {};
   if (!allDone(dkey(d))) d.setDate(d.getDate() - 1);
-  while (allDone(dkey(d))) { n++; d.setDate(d.getDate() - 1); }
-  return n;
+  for (;;) {
+    if (allDone(dkey(d))) n++;
+    else {
+      const p = new Date(d), w = wkey(d); p.setDate(p.getDate() - 1);
+      if (used[w] || !allDone(dkey(p))) break;
+      used[w] = 1;
+    }
+    d.setDate(d.getDate() - 1);
+  }
+  return { n, used };
 }
+const streak = () => streakCalc().n;
 function addXp(n) { S.xp += n; today().xp += n; save(); }
 function level() { const l = Math.floor(S.xp / 200); return { n: l + 1, name: LEVELS[Math.min(l, LEVELS.length - 1)], into: S.xp % 200 }; }
 function toast(t) { document.querySelectorAll('.toast').forEach(x => x.remove()); const e = document.createElement('div'); e.className = 'toast'; e.textContent = tr(t); document.body.append(e); setTimeout(() => e.remove(), 2200); }
@@ -93,7 +107,9 @@ let JOBS = (() => { try { return JSON.parse(localStorage.getItem('ibdaily.jobs')
 let jobFilter = 'new', jobQuery = '', jobOpen = null;
 // статус = то, что ты поставил на телефоне, пока Excel не изменился; иначе берём Excel
 const jstat = j => { const o = S.apps[j.id]; return o && o.base === j.status ? o.s : j.status; };
-const appsToday = () => Object.values(S.apps).filter(o => o.s === 'applied' && o.ts && dkey(new Date(o.ts)) === dkey()).length;
+// день, когда вакансия стала «подал»: с телефона (o.ap / ts) или по дате, когда синхронизатор увидел «Подал» в Excel (j.since)
+const appDay = j => { const o = S.apps[j.id]; return o && o.base === j.status ? (o.s === 'applied' ? o.ap || (o.ts ? dkey(new Date(o.ts)) : '') : '') : j.status === 'applied' ? j.since || '' : ''; };
+const appsToday = () => JOBS.jobs.filter(j => appDay(j) === dkey()).length;
 function setStatus(id, st) {
   const j = JOBS.jobs.find(x => x.id === id); if (!j) return;
   const was = jstat(j);
@@ -224,7 +240,7 @@ function render() {
   if (!enter && sub !== lastSub && !booting && animOn()) { app.classList.remove('sub'); void app.offsetWidth; app.classList.add('sub'); clearTimeout(subT); subT = setTimeout(() => app.classList.remove('sub'), 300); }
   lastSub = sub;
   if (document.getElementById('weekbox')) FX.week.fill();
-  T.onRender(); XT.badge();
+  T.onRender(); XT.badge(); ACH.check();
 }
 
 // ---------- экраны ----------
@@ -238,6 +254,7 @@ views.today = () => {
   return `
   <div class="row sp"><div><div class="tag">Mandate</div><h1>${hello}${S.name ? ', ' + esc(S.name) : ''}</h1><p class="sub">15 минут в день — путь в Investment Banking</p></div></div>
   <div class="row" style="margin-top:14px;gap:8px"><span class="pill"><span class="flame">🔥</span> <span data-count="${streak()}">${streak()}</span> дн.</span><span class="pill gold">★ <span data-count="${S.xp}">${S.xp}</span> XP</span><span class="pill">${L.name}</span></div>
+  ${ACH.freezeLine()}
   ${late ? `<div class="card banner"><b>⏰ Время действовать</b><p class="sub" style="color:var(--mute)">${!allDone() ? `Шагов обучения: ${STEPS.length - n}. ` : ''}${appsToday() < DAILY_APPS ? `Заявок осталось: ${DAILY_APPS - appsToday()}.` : ''}</p></div>` : ''}
   <div class="card"><div class="row"><div class="ring"><svg width="104" height="104" viewBox="0 0 104 104" style="--circ:${C}"><circle class="tr" cx="52" cy="52" r="44"/><circle class="fg" cx="52" cy="52" r="44" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/></svg><div class="c"><b>${n}/${STEPS.length}</b></div></div>
   <div><h2 style="margin:0">План на сегодня</h2><p class="sub">${allDone() ? 'Готово. Увидимся завтра.' : 'Заверши три шага, чтобы продлить серию.'}</p></div></div>
@@ -391,6 +408,7 @@ views.goals = () => {
   const L = level();
   return `<div class="tag">Прогресс</div><h1>Мой путь в IB</h1><p class="sub">Phase 0: стажировка Big4 TS / M&amp;A, CFA L1, нетворкинг</p>
   <div class="grid2" style="margin-top:14px"><div class="stat"><span class="small mute">Серия</span><b data-count="${streak()}">${streak()}</b></div><div class="stat"><span class="small mute">Лучшая серия</span><b data-count="${Math.max(S.best, streak())}">${Math.max(S.best, streak())}</b></div><div class="stat"><span class="small mute">Всего XP</span><b data-count="${S.xp}">${S.xp}</b></div><div class="stat"><span class="small mute">Уровень</span><b style="font-size:19px">${L.name}</b></div></div>
+  ${ACH.html()}
   <div class="card" data-go="jobs" style="cursor:pointer"><div class="row sp"><div><div class="tag">Вакансии</div><div style="font-size:17px;font-weight:600;margin-top:2px">Вакансии и заявки</div><div class="small mute">${JOBS.jobs.length} вакансий · сегодня подано ${appsToday()} из ${DAILY_APPS}</div></div><span style="font-size:22px">›</span></div></div>
   ${XT.netProgress()}
   ${FX.week.card()}
@@ -621,7 +639,7 @@ document.addEventListener('click', e => {
     }
     case 'clearlog': if (confirm(tr('Удалить журнал событий? Статистика по темам останется.'))) T.clearLog(); return;
     case 'reset': if (confirm(tr('Удалить весь прогресс?'))) { localStorage.removeItem(KEY); S = load(); save(); render(); } return;
-    default: if (FX.act(D.act, D) || LIB.act(D.act, D) || XT.act(D.act, D) || DEU.act(D.act, D)) return;
+    default: if (FX.act(D.act, D) || LIB.act(D.act, D) || XT.act(D.act, D) || DEU.act(D.act, D) || ACH.act(D.act, D)) return;
   }
 });
 
