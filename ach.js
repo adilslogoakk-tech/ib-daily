@@ -41,7 +41,7 @@ const ACH = (() => {
     if (S.wg && WG[S.wg.t] && WG[S.wg.t].cur() >= S.wg.n) { S.wgd = S.wgd || {}; if (!S.wgd[wk()]) { S.wgd[wk()] = 1; wg = true; } }
     if (!got.length && !wg && !first) return;
     S.bseed = 1; save();
-    if (wg) { addXp(50); setTimeout(() => toast('🎯 ' + tr('Цель недели выполнена') + ' · +50 XP'), 2800); }
+    if (wg) { addXp(50); setTimeout(celebrate, 400); setTimeout(() => toast('🎯 ' + tr('Цель недели выполнена') + ' · +50 XP'), 2800); }
     else if (got.length && !first) setTimeout(() => toast('🏅 ' + tr(got[0].t)), 2800);
   }
 
@@ -52,12 +52,12 @@ const ACH = (() => {
       return `<div class="card">${head}<p class="sub" style="margin:6px 0 4px">Выбери, чего хочешь достичь за эту неделю. За выполнение +50 XP.</p>${Object.entries(WG).map(([k, v]) => `<div style="margin-top:10px"><div class="small mute">${v.ic} <span>${v.t}</span></div><div class="sts" style="margin-top:6px">${v.opts.map(n => `<button class="st ${S.wg && S.wg.t === k && S.wg.n === n ? 'on' : ''}" data-act="wgset" data-t="${k}" data-n="${n}">${n}</button>`).join('')}</div></div>`).join('')}</div>`;
     }
     const ok = cur >= g.n;
-    return `<div class="card">${head}<div class="small mute" style="margin-top:8px">${g.ic} <span>${g.t}</span></div><div style="font-size:24px;font-weight:700;margin:2px 0 8px"><span>${Math.min(cur, 999)}</span> / <span>${g.n}</span></div><div class="bar" style="margin:0"><i style="width:${Math.min(100, cur / g.n * 100)}%${ok ? ';background:var(--green)' : ''}"></i></div>${ok ? '<p class="small" style="margin:8px 0 0;color:var(--green)">Выполнено ✓</p>' : ''}</div>`;
+    return `<div class="card">${head}<div class="small mute" style="margin-top:8px">${g.ic} <span>${g.t}</span></div><div style="font-size:24px;font-weight:700;margin:2px 0 8px"><span data-count="${Math.min(cur, 999)}">${Math.min(cur, 999)}</span> / <span>${g.n}</span></div><div class="bar" style="margin:0"><i style="width:${Math.min(100, cur / g.n * 100)}%${ok ? ';background:var(--green)' : ''}"></i></div>${ok ? '<p class="small" style="margin:8px 0 0;color:var(--green)">Выполнено ✓</p>' : ''}</div>`;
   }
   function badgeCard() {
     const all = LIST(), have = all.filter(b => S.badges[b.id]), rest = all.filter(b => !S.badges[b.id]);
-    const tile = (b, on) => `<div class="stat" style="padding:12px"><div style="font-size:24px;${on ? '' : 'filter:grayscale(1);opacity:.45'}">${b.ic}</div><div style="font-weight:600;font-size:14px;line-height:1.3;margin-top:4px">${b.t}</div>${on ? '<div class="small" style="color:var(--green)">✓</div>' : `<div class="small mute"><span>${Math.min(b.cur(), b.n)}</span> / <span>${b.n}</span></div>`}</div>`;
-    return `<div class="card"><div class="row sp"><h2 style="margin:0">Достижения</h2><span class="pill"><span>${have.length}</span> / <span>${all.length}</span></span></div><div class="grid2" style="margin-top:12px">${have.map(b => tile(b, 1)).join('')}${rest.map(b => tile(b, 0)).join('')}</div></div>`;
+    const tile = (b, on, n) => `<div class="stat bdg ${on ? 'on' : ''}" style="padding:12px;--i:${Math.min(n, 12)}"><div class="bic" style="font-size:24px;${on ? '' : 'filter:grayscale(1);opacity:.45'}">${b.ic}</div><div style="font-weight:600;font-size:14px;line-height:1.3;margin-top:4px">${b.t}</div>${on ? '<div class="small" style="color:var(--green)">✓</div>' : `<div class="small mute"><span>${Math.min(b.cur(), b.n)}</span> / <span>${b.n}</span></div>`}</div>`;
+    return `<div class="card"><div class="row sp"><h2 style="margin:0">Достижения</h2><span class="pill"><span data-count="${have.length}">${have.length}</span> / <span>${all.length}</span></span></div><div class="grid2" style="margin-top:12px">${have.map((b, i) => tile(b, 1, i)).join('')}${rest.map((b, i) => tile(b, 0, have.length + i)).join('')}</div></div>`;
   }
   const html = () => goalCard() + badgeCard();
   function freezeLine() {

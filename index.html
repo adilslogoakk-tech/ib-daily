@@ -268,6 +268,15 @@ html.themeswap *{transition:background-color .45s,color .45s,border-color .45s,f
 .card.out{animation:itemout .28s ease-in forwards;overflow:hidden}
 .rbar i{transition:width .25s ease-out}
 .card[data-act]{transition:transform .14s cubic-bezier(.3,1.4,.5,1),background-color .25s}.card[data-act]:active,.goal.chap:active{transform:scale(.97)}
+@keyframes qin{from{transform:translateY(16px)}}
+#qbar{animation:qin .24s cubic-bezier(.2,.9,.3,1)}
+.book [data-q]{transition:background-color .25s,box-shadow .25s,border-color .25s}
+@keyframes jbin{from{transform:translateY(-6px)}}
+.job.open .jb{animation:jbin .22s ease-out}
+.bklist.re>.card{animation:itemin .26s ease-out backwards;animation-delay:calc(var(--i,0)*28ms)}
+#app.enter .bdg{animation:segon .38s cubic-bezier(.3,1.5,.5,1) backwards;animation-delay:calc(var(--i,0)*30ms + .2s)}
+#app.enter .bdg.on .bic{animation:checkpop .5s cubic-bezier(.3,1.7,.5,1) backwards;animation-delay:calc(var(--i,0)*30ms + .45s)}
+#app.enter .dots i.on{animation:checkpop .4s cubic-bezier(.3,1.7,.5,1) backwards;animation-delay:calc(var(--i,0)*70ms + .3s)}
 #app.enter .goal.done .chk{animation:checkpop .4s .3s cubic-bezier(.3,1.7,.5,1) both}
 /* поиск, ментальная математика, кейсы */
 .avatar.srchb{right:68px;background:var(--soft);color:var(--text);box-shadow:none;border:1px solid var(--line);font-size:16px}
