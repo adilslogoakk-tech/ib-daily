@@ -195,7 +195,13 @@ const LIB = (() => {
     });
     CARDS.slice(0, 61).forEach((c, i) => { if (c.ru === undefined) c.ru = c.a; c.a = C && C[i] ? C[i] : c.ru; });
   };
+  // для поиска и переходов из него
+  async function preloadBooks() {
+    if (!BK.idx) { try { const d = CLOUD.on && await CLOUD.doc('books'); BK.idx = d || (await cget('index')) || []; } catch (e) { BK.idx = (await cget('index')) || []; } }
+    for (const m of BK.idx) await loadBook(m.id);
+  }
+  async function openPart(bid, i) { await loadBook(bid); seg = 'books'; BK.open = bid; open('bk:' + bid + ':' + i); }
   const syncAll = () => { sync(); syncLessons(); syncDrills(); };
   syncAll();
-  return { sync: syncAll, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, sub: () => seg || '', reset: () => { ch = null; BK.open = null; } };
+  return { sync: syncAll, bookData: () => BK, preloadBooks, openPart, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, sub: () => seg || '', reset: () => { ch = null; BK.open = null; } };
 })();

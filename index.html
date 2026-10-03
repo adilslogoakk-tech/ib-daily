@@ -266,6 +266,17 @@ html.themeswap *{transition:background-color .45s,color .45s,border-color .45s,f
 .rbar i{transition:width .25s ease-out}
 .card[data-act]{transition:transform .14s cubic-bezier(.3,1.4,.5,1),background-color .25s}.card[data-act]:active,.goal.chap:active{transform:scale(.97)}
 #app.enter .goal.done .chk{animation:checkpop .4s .3s cubic-bezier(.3,1.7,.5,1) both}
+/* поиск, ментальная математика, кейсы */
+.avatar.srchb{right:68px;background:var(--soft);color:var(--text);box-shadow:none;border:1px solid var(--line);font-size:16px}
+#srch{position:fixed;inset:0;z-index:90;background:var(--bg);overflow-y:auto;padding:calc(env(safe-area-inset-top) + 14px) 16px 40px}
+#srch .srh{display:flex;gap:8px;align-items:center;position:sticky;top:0;background:var(--bg);padding-bottom:8px}
+#srch .srh input{flex:1}
+.sres{cursor:pointer;margin:8px 0}.sres .srt{font-weight:600;line-height:1.35;margin-top:2px}
+.sres mark{background:color-mix(in srgb,var(--gold) 38%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+.srmore{margin-top:8px;font-size:14px;line-height:1.5}.srmore .okk{color:var(--green);font-weight:600}
+.mmq{font-size:24px;font-weight:700;line-height:1.35;margin-bottom:16px}
+input.mmin{text-align:center;font-size:26px;font-weight:700;letter-spacing:.02em}
+input.mmin.ok{border-color:var(--green)}input.mmin.bad{border-color:var(--red)}
 html[data-anim=off] *,html[data-anim=off] *::before,html[data-anim=off] *::after{animation:none!important;transition:none!important}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 </style>
@@ -330,6 +341,8 @@ html[data-anim=off] *,html[data-anim=off] *::before,html[data-anim=off] *::after
 <script src="book_az_i.js"></script>
 <script src="library.js"></script>
 <script src="features.js"></script>
+<script src="cases.js"></script>
+<script src="extras.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

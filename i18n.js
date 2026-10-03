@@ -4,13 +4,15 @@
   const LOC = { ru: 'ru-RU', en: 'en-GB', de: 'de-DE', az: 'az-AZ' };
   const ex = new Map(), tp = [];
   const esc = s => [...s].map(c => '.*+?^$|(){}[]'.includes(c) || c.charCodeAt(0) === 92 ? String.fromCharCode(92) + c : c).join('');
-  D.forEach(r => {
+  const reg = r => {
     const k = N(r[0]);
     if (!/\{\d+\}/.test(k)) { ex.set(k, r); return; }
     const nums = [], re = '^' + k.split(/(\{\d+\})/).map(p => { const m = p.match(/^\{(\d+)\}$/); if (m) { nums.push(m[1]); return '(.+?)'; } return esc(p); }).join('') + '$';
     tp.push({ re: new RegExp(re), nums, r, w: k.replace(/\{\d+\}/g, '').length });
-  });
-  tp.sort((a, b) => b.w - a.w);
+  };
+  D.forEach(reg);
+  const sortTp = () => tp.sort((a, b) => b.w - a.w);
+  sortTp();
   const I = { lang: 'ru', loc: 'ru-RU', names: { ru: 'Русский', en: 'English', de: 'Deutsch', az: 'Azərbaycanca' } };
   const idx = () => ({ en: 1, de: 2, az: 3 })[I.lang];
   function tr(s, d) {
@@ -81,6 +83,7 @@
     if (typeof LIB !== 'undefined') LIB.sync();
     walk(document.body);
   }
+  I.add = rows => { rows.forEach(reg); sortTp(); };   // модули добавляют свои строки: I18N.add([[ru, en, de, az], ...])
   I.tr = tr; I.set = set; I.list = Object.keys(LOC);
   window.I18N = I; window.tr = tr;
   let saved = 'ru'; try { saved = localStorage.getItem('ibdaily.lang') || 'ru'; } catch (e) {}

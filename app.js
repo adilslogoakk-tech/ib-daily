@@ -27,7 +27,7 @@ let S = load();
 function normalize(s) {
   s = s || { xp: 0, days: {}, lessons: [], boxes: {}, miss: {}, goals: DEFAULT_GOALS, remind: '19:00', best: 0 };
   // значения по умолчанию для полей, добавленных позже (работает и для старых сохранений, и после сброса)
-  for (const [k, v] of Object.entries({ apps: {}, seen: [], items: {}, topics: {}, wrong: {}, focus: [], stats: {}, misc: {}, events: [], requests: [], reqDel: [], later: [], read: {}, pos: {} })) s[k] = s[k] || v;
+  for (const [k, v] of Object.entries({ apps: {}, seen: [], items: {}, topics: {}, wrong: {}, focus: [], stats: {}, misc: {}, events: [], requests: [], reqDel: [], later: [], read: {}, pos: {}, contacts: [], cases: {}, mm: {}, cl: {} })) s[k] = s[k] || v;
   for (const k of ['hour', 'time', 'ms']) s.stats[k] = s.stats[k] || {};
   return s;
 }
@@ -132,7 +132,7 @@ function jobsList() {
     ${open ? `<div class="jb"><div class="small mute" style="margin-bottom:8px">${esc(j.type || '')} · ${esc(j.category || '')} · ${esc(j.posted || '')} · ${esc(j.source || '')}</div>
       ${j.lang ? `<p class="small"><b>Язык:</b> ${esc(j.lang)}</p>` : ''}${j.pay ? `<p class="small"><b>Оплата:</b> ${esc(j.pay)}</p>` : ''}${j.resume ? `<p class="small"><b>CV:</b> ${esc(j.resume)}</p>` : ''}
       <a class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin:8px 0" href="${esc(j.link)}" target="_blank" rel="noopener">Открыть вакансию ↗</a>
-      ${reportBtn(j)}<button class="btn ghost" style="margin:0 0 8px" data-act="evjob" data-id="${j.id}">📅 Назначить тест или интервью</button>
+      ${reportBtn(j)}${XT.letterBtn(j)}${XT.letterHtml(j)}<button class="btn ghost" style="margin:0 0 8px" data-act="evjob" data-id="${j.id}">📅 Назначить тест или интервью</button>
       ${st === 'applied' ? FX.fu.cardBlock(j) : ''}
       <div class="sts">${['applied', 'exam', 'rejected', 'new'].map(k => `<button class="st ${st === k ? 'on' : ''}" data-st="${k}" data-id="${j.id}">${k === 'new' ? 'Сбросить' : ST[k]}</button>`).join('')}</div></div>` : ''}</div>`;
   }).join('');
@@ -142,6 +142,7 @@ views.jobs = () => {
   const n = appsToday();
   return `<div class="row"><button class="pill" data-go="${jobsFrom}">‹ Назад</button></div><div class="tag" style="margin-top:14px">Вакансии</div><h1>Мои заявки</h1><p class="sub">${JOBS.jobs.length ? 'Обновлено ' + new Date(JOBS.updated).toLocaleString(I18N.loc, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Данные ещё не загружены'}</p>
   <div class="card"><div class="row sp"><b>Сегодня подано</b><span class="pill">${Math.min(n, 99)} из ${DAILY_APPS}</span></div><div class="bar" style="margin:10px 0 0"><i style="width:${Math.min(100, n / DAILY_APPS * 100)}%"></i></div></div>
+  ${XT.analyticsHtml()}
   <input type="text" id="jq" placeholder="Поиск по названию или компании" value="${esc(jobQuery)}">
   <div class="chips">${Object.keys(ST).map(k => `<button class="chip ${jobFilter === k ? 'on' : ''}" data-filter="${k}">${ST[k]} <b>${cnt[k] || 0}</b></button>`).join('')}</div>
   <div class="card" style="padding:4px 14px" id="joblist">${jobsList()}</div>`;
@@ -150,7 +151,7 @@ views.jobs = () => {
 // ---------- навигация ----------
 let tab = 'today', jobsFrom = 'goals', sess = null, prevTab = 'today', lastKey = '', lastNav = '', lastSub = '', subT = null, booting = true, enterT = null;
 const TABS = [['today', 'Сегодня'], ['learn', 'Учёба'], ['book', 'Книга'], ['news', 'Новости'], ['goals', 'Прогресс']];
-function go(t) { if (t === 'jobs' && tab !== 'jobs') jobsFrom = tab === 'jobs' ? 'goals' : tab; FX.iv.stop(); LIB.closeSheet(); if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
+function go(t) { XT.stop(); if (t === 'jobs' && tab !== 'jobs') jobsFrom = tab === 'jobs' ? 'goals' : tab; FX.iv.stop(); LIB.closeSheet(); if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
 let authErr = '';
 const RU_ERR = { 'Invalid login credentials': 'Неверный email или пароль', 'User already registered': 'Такой аккаунт уже есть, нажми «Войти»', 'Email not confirmed': 'Подтверди почту по письму, затем войди' };
 function authHtml() {
@@ -211,11 +212,11 @@ function hideSplash() {
 
 function render() {
   if (CLOUD.enabled && !CLOUD.on && !S.localOnly) { $('#nav').innerHTML = ''; lastNav = ''; $('#app').innerHTML = authHtml(); return; }
-  if (lastNav !== tab) { $('#nav').innerHTML = TABS.map(([k, l]) => `<button class="${tab === k || (k === 'goals' && tab === 'jobs') ? 'on' : ''}" data-go="${k}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${l}</button>`).join(''); lastNav = tab; }
-  const key = sess ? sess.type + ':' + (sess.type === 'lesson' ? (sess.i < sess.l.cards.length ? 'r' + sess.i : 'q' + sess.qi) : (sess.qi ?? sess.i ?? '')) : tab === 'book' ? 'book:' + (LIB.cur() || '') : tab;
+  if (lastNav !== tab) { $('#nav').innerHTML = TABS.map(([k, l]) => `<button class="${tab === k || (k === 'goals' && (tab === 'jobs' || tab === 'net')) ? 'on' : ''}" data-go="${k}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${l}</button>`).join(''); lastNav = tab; }
+  const key = sess ? sess.type === 'mm' ? 'mm:' + sess.phase : sess.type === 'case' ? 'case:' + (sess.i < 0 ? 'i' : sess.i >= sess.c.steps.length ? 'e' : 'q') : sess.type + ':' + (sess.type === 'lesson' ? (sess.i < sess.l.cards.length ? 'r' + sess.i : 'q' + sess.qi) : (sess.qi ?? sess.i ?? '')) : tab === 'book' ? 'book:' + (LIB.cur() || '') : tab;
   const enter = key !== lastKey; lastKey = key;
   const app = $('#app');
-  app.innerHTML = (sess || tab === 'settings' || (tab === 'book' && LIB.cur()) ? '' : `<button class="avatar" data-go="settings" aria-label="Профиль и настройки"${avStyle()}>${avInner()}</button>`) + (sess ? views[sess.type]() : views[tab]());
+  app.innerHTML = (sess || tab === 'settings' || (tab === 'book' && LIB.cur()) ? '' : `<button class="avatar srchb" data-act="srchopen" aria-label="Поиск">🔍</button><button class="avatar" data-go="settings" aria-label="Профиль и настройки"${avStyle()}>${avInner()}</button>`) + (sess ? views[sess.type]() : views[tab]());
   if (!sess && tab === 'news') loadNews();
   if (!enter) app.classList.remove('enter'); else if (!booting && animOn()) enterView();
   // переключение внутри экрана (Позже / Главы / Книги, язык): плавно показываем только содержимое под переключателем
@@ -241,8 +242,10 @@ views.today = () => {
   <div class="card"><div class="row"><div class="ring"><svg width="104" height="104" viewBox="0 0 104 104" style="--circ:${C}"><circle class="tr" cx="52" cy="52" r="44"/><circle class="fg" cx="52" cy="52" r="44" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - pct)}"/></svg><div class="c"><b>${n}/${STEPS.length}</b></div></div>
   <div><h2 style="margin:0">План на сегодня</h2><p class="sub">${allDone() ? 'Готово. Увидимся завтра.' : 'Заверши три шага, чтобы продлить серию.'}</p></div></div>
   ${STEPS.map(s => `<div class="step ${done(s.id) ? 'done' : ''}" data-start="${s.id}"><div class="ic">${s.ic}</div><div><div class="t">${s.t}</div><div class="small mute">${s.d} · +${s.xp} XP</div></div><div class="chk">${done(s.id) ? '✓' : ''}</div></div>`).join('')}</div>
+  ${XT.quickCard()}
   ${evToday()}
   ${FX.fu.html()}
+  ${XT.netCard()}
   ${coachCard()}
   <div class="card" data-go="jobs" style="cursor:pointer"><div class="row sp"><div><div class="tag">Заявки сегодня</div><div style="font-size:17px;font-weight:600;margin-top:2px">${appsToday()} из ${DAILY_APPS}</div></div><div class="dots">${Array.from({ length: DAILY_APPS }, (_, i) => `<i class="${i < appsToday() ? 'on' : ''}"></i>`).join('')}</div><span style="font-size:22px;margin-left:8px">›</span></div>${appsToday() < DAILY_APPS ? `<p class="small mute" style="margin:8px 0 0">Ещё ${DAILY_APPS - appsToday()} — ${JOBS.jobs.filter(j => jstat(j) === 'new').length} вакансий ждут. Открыть →</p>` : '<p class="small" style="margin:8px 0 0;color:var(--green)">Норма выполнена</p>'}</div>
   ${goal ? `<div class="card"><div class="tag">Цель из роадмапа</div><p style="margin:6px 0 0;font-size:16px">${esc(goal.t)}</p></div>` : ''}
@@ -256,11 +259,15 @@ function coachCard() {
   return `<div class="card"><div class="tag">Что подтянуть</div><div style="font-size:17px;font-weight:600;margin:4px 0">${TOPICS[w.k].name}: освоено ${w.k100}%</div><p class="small mute" style="margin:0">По ${w.n} ответам.${w.sp > 1.3 ? ' Ты в этой теме медленнее своей нормы.' : ''}</p><button class="btn ghost" data-start="drill-topic" data-topic="${w.k}">Тренировать 5 минут</button></div>`;
 }
 views.interview = () => FX.iv.html();
+views.mm = () => XT.mmHtml();
+views.case = () => XT.caseHtml();
+views.net = () => XT.netHtml();
 views.book = () => LIB.html();
 views.learn = () => `
   <div class="tag">Учёба</div><h1>Концепции</h1><p class="sub">${S.lessons.length} из ${LESSONS.length} уроков пройдено · ${DRILLS.length} задач · ${CARDS.length} карточек</p>${S.lessons.length >= LESSONS.length ? '<div class="card banner"><b>Все уроки пройдены</b><p class="sub" style="color:var(--mute)">Дальше идёт повторение. Новые уроки добавим позже.</p></div>' : ''}
   <div class="grid2" style="margin-top:14px"><button class="btn ghost" style="margin:0" data-start="drill-free">🧮 Задачи</button><button class="btn ghost" style="margin:0" data-start="cards">🃏 Карточки</button></div>
   <button class="btn" style="margin-top:10px" data-start="interview">🎤 Режим собеседования</button>
+  ${XT.learnCards()}
   <div class="card"><div class="tag" style="margin-bottom:8px">Цветовая карта терминов</div><div class="legend">${Object.entries(CATS).map(([k, c]) => `<span class="k k-${k}">${c.ic} ${c.name}</span>`).join('')}</div><p class="small mute" style="margin:10px 0 0">Один цвет — одна группа понятий. Запоминай по цвету.</p></div>
   <div class="card" style="padding:6px 16px">${LESSONS.map(l => `<div class="goal" data-lesson="${l.id}" style="cursor:pointer;align-items:center;border-left:3px solid var(--c-${l.cat || LESSON_CAT[l.id] || 'val'});padding-left:12px"><div class="chk" style="${S.lessons.includes(l.id) ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${S.lessons.includes(l.id) ? '✓' : ''}</div><div><div class="tag">${l.tag}</div><div style="font-weight:600">${l.title}</div></div></div>`).join('')}</div>`;
 
@@ -281,7 +288,7 @@ const evSuggest = (jobId, type) => {
 const days = n => n + (n % 10 === 1 && n % 100 !== 11 ? ' день' : [2, 3, 4].includes(n % 10) && ![12, 13, 14].includes(n % 100) ? ' дня' : ' дней');
 const when = n => n === 0 ? 'сегодня' : n === 1 ? 'завтра' : 'через ' + days(n);
 // ---------- запросы к тренеру (план подготовки, отчёт по компании) ----------
-const REQ_TYPES = { prep: 'План подготовки к событию', report: 'Отчёт по компании' };
+const REQ_TYPES = { prep: 'План подготовки к событию', report: 'Отчёт по компании', letter: 'Сопроводительное письмо' };
 const REQ_ST = { queued: 'В очереди', sent: 'Отправлено', done: 'Готово' };
 let RESULTS = (() => { try { return JSON.parse(localStorage.getItem('ibdaily.results')) || { items: [] }; } catch (e) { return { items: [] }; } })();
 const resFor = id => RESULTS.items.find(x => x.id === id);
@@ -299,9 +306,9 @@ function dropRequests(test) {
   flushReqDel();
 }
 function addRequest(type, j, ev) {
-  const dup = S.requests.find(r => r.type === type && (type === 'report' ? r.company === j.company : r.eventId === ev.id));
+  const dup = S.requests.find(r => r.type === type && (type === 'report' ? r.company === j.company : type === 'letter' ? r.jobId === j.id : r.eventId === ev.id));
   if (dup) return dup;
-  const r = { id: (type === 'report' ? 'r' : 'p') + Date.now().toString(36), type, jobId: j ? j.id : '', company: j ? j.company : ev.title, title: j ? j.title : '', eventId: ev ? ev.id : '', created: Date.now() };
+  const r = { id: (type === 'report' ? 'r' : type === 'letter' ? 'l' : 'p') + Date.now().toString(36), type, jobId: j ? j.id : '', company: j ? j.company : ev.title, title: j ? j.title : '', eventId: ev ? ev.id : '', created: Date.now() };
   S.requests.push(r); save(); T.track('request', { type, co: r.company });
   return r;
 }
@@ -381,6 +388,7 @@ views.goals = () => {
   return `<div class="tag">Прогресс</div><h1>Мой путь в IB</h1><p class="sub">Phase 0: стажировка Big4 TS / M&amp;A, CFA L1, нетворкинг</p>
   <div class="grid2" style="margin-top:14px"><div class="stat"><span class="small mute">Серия</span><b data-count="${streak()}">${streak()}</b></div><div class="stat"><span class="small mute">Лучшая серия</span><b data-count="${Math.max(S.best, streak())}">${Math.max(S.best, streak())}</b></div><div class="stat"><span class="small mute">Всего XP</span><b data-count="${S.xp}">${S.xp}</b></div><div class="stat"><span class="small mute">Уровень</span><b style="font-size:19px">${L.name}</b></div></div>
   <div class="card" data-go="jobs" style="cursor:pointer"><div class="row sp"><div><div class="tag">Вакансии</div><div style="font-size:17px;font-weight:600;margin-top:2px">Вакансии и заявки</div><div class="small mute">${JOBS.jobs.length} вакансий · сегодня подано ${appsToday()} из ${DAILY_APPS}</div></div><span style="font-size:22px">›</span></div></div>
+  ${XT.netProgress()}
   ${FX.week.card()}
   ${eventsCard()}
   ${requestsCard()}
@@ -548,7 +556,7 @@ document.addEventListener('click', e => {
     case 'lq': s.qi++; s.picked = null; s.opts = null; return render();
     case 'dq': s.qi++; s.picked = null; s.opts = null; return render();
     case 'lfin': { T.track('lesson', { id: s.l.id, ok: s.ok }); const first = !S.lessons.includes(s.l.id); if (first) S.lessons.push(s.l.id); save(); complete('lesson', first ? 30 : 10); return go('today'); }
-    case 'dfin': T.track('drill_done', { ok: s.ok, n: s.qs.length, daily: !!s.daily, topic: s.topic || null }); if (s.daily) complete('drill', 10 + s.ok * 6); else addXp(s.ok * 4); return go(s.daily ? 'today' : 'learn');
+    case 'dfin': if (s.quick) return XT.quickFinish(s); T.track('drill_done', { ok: s.ok, n: s.qs.length, daily: !!s.daily, topic: s.topic || null }); if (s.daily) complete('drill', 10 + s.ok * 6); else addXp(s.ok * 4); return go(s.daily ? 'today' : 'learn');
     case 'flip': s.flip = true; s.flipMs = T.elapsed(); return render();
     case 'cyes': case 'cno': { const c = s.q[s.i], ok = D.act === 'cyes'; T.record(c.id, ok, s.flipMs, {}); T.track('card', { id: c.id, topic: c.topic, ok, flipMs: s.flipMs }); addXp(ok ? 3 : 1); s.i++; s.flip = false; return render(); }
     case 'newsdone': complete('news', 20); return render();
@@ -608,7 +616,7 @@ document.addEventListener('click', e => {
     }
     case 'clearlog': if (confirm(tr('Удалить журнал событий? Статистика по темам останется.'))) T.clearLog(); return;
     case 'reset': if (confirm(tr('Удалить весь прогресс?'))) { localStorage.removeItem(KEY); S = load(); save(); render(); } return;
-    default: if (FX.act(D.act, D) || LIB.act(D.act, D)) return;
+    default: if (FX.act(D.act, D) || LIB.act(D.act, D) || XT.act(D.act, D)) return;
   }
 });
 
