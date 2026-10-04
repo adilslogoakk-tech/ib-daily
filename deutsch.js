@@ -10,6 +10,9 @@ const DEU = (() => {
     fin: { ru: 'Финансирование', en: 'Financing', de: 'Finanzierung', az: 'Maliyyələşdirmə' },
     mkt: { ru: 'Рынки', en: 'Markets', de: 'Märkte', az: 'Bazarlar' },
     job: { ru: 'Работа и резюме', en: 'Jobs and applications', de: 'Bewerbung und Karriere', az: 'İş və müraciət' },
+    ctl: { ru: 'Контроллинг и налоги', en: 'Controlling and tax', de: 'Controlling und Steuern', az: 'Kontrollinq və vergilər' },
+    law: { ru: 'Право и регулирование', en: 'Law and regulation', de: 'Recht und Regulierung', az: 'Hüquq və tənzimləmə' },
+    ad: { ru: 'Язык вакансий', en: 'Job posting language', de: 'Sprache der Stellenanzeigen', az: 'Vakansiya dili' },
   };
   const W = [
     // Rechnungswesen
@@ -127,12 +130,22 @@ const DEU = (() => {
     ['Gerne stehe ich für ein persönliches Gespräch zur Verfügung.', 'I would be happy to meet in person.', 'Буду рад личной беседе.', 'Şəxsi görüşə məmnuniyyətlə hazıram.', 'job', 'Gerne stehe ich für ein persönliches Gespräch zur Verfügung.'],
     ['Könnten Sie mir den Stand meiner Bewerbung mitteilen?', 'Could you tell me the status of my application?', 'Не могли бы вы сообщить, на каком этапе моя заявка?', 'Müraciətimin vəziyyəti barədə məlumat verə bilərsiniz?', 'job', 'Könnten Sie mir den Stand meiner Bewerbung mitteilen? Ich bin weiterhin sehr interessiert.'],
     ['Vielen Dank für Ihre Zeit.', 'Thank you for your time.', 'Спасибо за ваше время.', 'Vaxtınız üçün təşəkkür edirəm.', 'job', 'Vielen Dank für Ihre Zeit und das nette Gespräch.'],
-  ].map((w, i) => ({ i: 'w' + i, de: w[0], en: w[1], ru: w[2], az: w[3], cat: w[4], ex: w[5], k: w[6] || null }));
+  ].concat((() => { const seen = new Set(); return (window.DEU_MORE || []).filter(w => { const k = w[0].toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }); })()).filter((w, i, a) => a.findIndex(x => x[0].toLowerCase() === w[0].toLowerCase()) === i).map((w, i) => ({ i: 'w' + i, de: w[0], en: w[1], ru: w[2], az: w[3], cat: w[4], ex: w[5], k: w[6] || null }));
   const byId = Object.fromEntries(W.map(w => [w.i, w]));
   const gl = w => I18N.lang === 'ru' ? w.ru : I18N.lang === 'az' ? w.az : w.en;
   const catName = c => CATS[c][I18N.lang] || CATS[c].en;
   const gender = de => (de.match(/^(der|die|das)\s/) || [])[1] || '';
   const deHtml = de => { const g = gender(de); return g ? `<span class="art ${g}">${g}</span> ${esc(de.slice(g.length + 1))}` : esc(de); };
+  // озвучка немецким голосом iPhone (без интернета и бесплатно)
+  const speak = txt => {
+    try {
+      const u = new SpeechSynthesisUtterance(txt.replace(/\s*\([^)]*\)/g, ''));
+      u.lang = 'de-DE'; u.rate = 0.9;
+      const v = speechSynthesis.getVoices().find(x => /^de/i.test(x.lang)); if (v) u.voice = v;
+      speechSynthesis.cancel(); speechSynthesis.speak(u);
+    } catch (e) { toast('Озвучка недоступна на этом устройстве'); }
+  };
+  const spk = (id, p) => `<button class="spk" data-act="despeak" data-i="${id}" data-p="${p}" aria-label="Озвучить">🔊</button>`;
   const st = () => S.de || (S.de = {});
   const stats = () => { const now = Date.now(), v = Object.values(st()); return { n: W.length, known: v.filter(x => x.n >= 3).length, due: v.filter(x => x.last && x.due <= now).length, seen: v.length }; };
   const sh = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -170,6 +183,16 @@ const DEU = (() => {
     const ids = sh(W).slice(0, 10), qs = ids.map(w => { const same = sh(W.filter(x => x.cat === w.cat && x.i !== w.i)).slice(0, 3); const opts = sh([w, ...same]).map(x => x.i); return { id: w.i, opts, a: opts.indexOf(w.i) }; });
     sess = { type: 'de', mode: 'quiz', qs, i: 0, picked: null, ok: 0 }; render();
   }
+  const NOUNS = () => W.filter(w => /^(der|die|das)\s/.test(w.de) && !/\s(und|der|die|das|von|vor)\s/.test(w.de.replace(/^(der|die|das)\s/, '')));
+  function startArt() {
+    const qs = sh(NOUNS()).slice(0, 10).map(w => ({ id: w.i, a: gender(w.de) }));
+    sess = { type: 'de', mode: 'art', qs, i: 0, picked: null, ok: 0 }; render();
+  }
+  function artPick(g) {
+    const s = sess, q = s.qs[s.i]; if (s.picked != null) return;
+    s.picked = g; const ok = g === q.a; if (ok) { s.ok++; addXp(2); } else { const r = st()[q.id] || (st()[q.id] = { n: 0, due: 0 }); r.n = 0; r.due = Date.now(); r.last = Date.now(); save(); }
+    T.track('de_art', { id: q.id, ok }); render();
+  }
   function startView() { sess = { type: 'de', mode: 'view', cat: 'acc' }; render(); }
   function startInterview() {
     const q = sh(Q).slice(0, 5);
@@ -193,7 +216,7 @@ const DEU = (() => {
     if (s.mode === 'view') {
       const list = W.filter(w => w.cat === s.cat);
       return head('Список слов') + `<div class="sts" style="margin:14px 0 6px">${Object.keys(CATS).map(c => `<button class="st ${s.cat === c ? 'on' : ''}" data-act="decat" data-v="${c}">${esc(catName(c))}</button>`).join('')}</div>` +
-        `<div class="card" style="padding:4px 14px">${list.map(w => `<div class="goal" style="display:block;padding:10px 0"><div style="font-weight:600;font-size:16px;line-height:1.35" translate="no">${deHtml(w.de)}</div><div class="small">${esc(gl(w))}</div><div class="small mute" style="line-height:1.45;margin-top:2px" translate="no">${esc(w.ex)}</div></div>`).join('')}</div>`;
+        `<div class="card" style="padding:4px 14px">${list.map(w => `<div class="goal" style="display:block;padding:10px 0"><div style="font-weight:600;font-size:16px;line-height:1.35" translate="no">${deHtml(w.de)} ${spk(w.i, 'de')}</div><div class="small">${esc(gl(w))}</div><div class="small mute" style="line-height:1.45;margin-top:2px" translate="no">${esc(w.ex)} ${spk(w.i, 'ex')}</div></div>`).join('')}</div>`;
     }
     if (s.mode === 'deck') {
       if (s.i >= s.q.length) return head('Карточки') + `<div class="card" style="text-align:center"><h2>Серия окончена</h2><p class="sub">Знал(а): ${s.ok} из ${s.q.length}</p></div><button class="btn" data-act="dedone">Готово</button>`;
@@ -202,9 +225,17 @@ const DEU = (() => {
       <div class="card flash"><div class="in ${s.flip ? 'flip' : ''}" data-act="deflip"><div style="text-align:center">
         <div class="tag" style="margin-bottom:10px">${esc(catName(w.cat))}</div>
         ${!s.flip ? (front ? `<div style="font-size:26px;font-weight:700;line-height:1.3" translate="no">${deHtml(w.de)}</div>` : `<div style="font-size:22px;font-weight:600;line-height:1.3">${esc(gl(w))}</div>`) + '<div class="small mute" style="margin-top:14px;font-family:var(--sans)">нажми, чтобы увидеть ответ</div>'
-          : `<div style="font-size:24px;font-weight:700;line-height:1.3" translate="no">${deHtml(w.de)}</div><div style="margin-top:8px">${esc(gl(w))}</div>${I18N.lang === 'ru' || I18N.lang === 'az' ? `<div class="small mute">${esc(w.en)}</div>` : ''}<div class="small" style="margin-top:12px;line-height:1.5;font-family:var(--sans)" translate="no">${esc(w.ex)}</div>`}
+          : `<div style="font-size:24px;font-weight:700;line-height:1.3" translate="no">${deHtml(w.de)} ${spk(w.i, 'de')}</div><div style="margin-top:8px">${esc(gl(w))}</div>${I18N.lang === 'ru' || I18N.lang === 'az' ? `<div class="small mute">${esc(w.en)}</div>` : ''}<div class="small" style="margin-top:12px;line-height:1.5;font-family:var(--sans)" translate="no">${esc(w.ex)} ${spk(w.i, 'ex')}</div>`}
       </div></div></div>
       ${s.flip ? '<div class="grid2"><button class="btn ghost" data-act="deno">Повторить</button><button class="btn" data-act="deyes">Знал(а)</button></div>' : ''}`;
+    }
+    if (s.mode === 'art') {
+      if (s.i >= s.qs.length) return head('Артикли') + `<div class="card" style="text-align:center"><h2>${s.ok} из ${s.qs.length}</h2><p class="sub">Ошибки вернутся в карточки уже сегодня.</p></div><button class="btn" data-act="dedone">Готово</button>`;
+      const q = s.qs[s.i], w = byId[q.id], p = s.picked, noun = w.de.replace(/^(der|die|das)\s/, '');
+      return head(`Вопрос ${s.i + 1} из ${s.qs.length}`) + `<div class="bar" style="margin-top:14px"><i style="width:${s.i / s.qs.length * 100}%"></i></div>
+      <div class="card"><div class="tag">Какой артикль?</div><h2 style="margin-top:6px;line-height:1.35" translate="no">${esc(noun)}</h2><div class="small mute">${esc(gl(w))}</div>
+      <div class="grid3" style="margin-top:12px">${['der', 'die', 'das'].map(g => `<button class="opt ${p != null ? (g === q.a ? 'ok' : g === p ? 'bad' : '') : ''}" style="text-align:center" data-act="deart" data-g="${g}" ${p != null ? 'disabled' : ''} translate="no">${g}</button>`).join('')}</div>
+      ${p != null ? `<div class="explain" translate="no">${deHtml(w.de)} ${spk(w.i, 'de')}<div class="small mute" style="margin-top:4px">${esc(w.ex)}</div></div>` : ''}</div>${p != null ? '<button class="btn" data-act="denext">Дальше</button>' : ''}`;
     }
     // quiz
     if (s.i >= s.qs.length) return head('Тест') + `<div class="card" style="text-align:center"><h2>${s.ok} из ${s.qs.length}</h2><p class="sub">Ошибки вернутся в карточки уже сегодня.</p></div><button class="btn" data-act="dedone">Готово</button>`;
@@ -212,13 +243,14 @@ const DEU = (() => {
     return head(`Вопрос ${s.i + 1} из ${s.qs.length}`) + `<div class="bar" style="margin-top:14px"><i style="width:${s.i / s.qs.length * 100}%"></i></div>
     <div class="card"><div class="tag">Как это по-немецки?</div><h2 style="margin-top:6px;line-height:1.35">${esc(gl(w))}</h2>
     ${q.opts.map((id, k) => `<button class="opt ${p != null ? (k === q.a ? 'ok' : k === p ? 'bad' : '') : ''}" data-act="dequiz" data-k="${k}" ${p != null ? 'disabled' : ''} translate="no">${esc(byId[id].de)}</button>`).join('')}
-    ${p != null ? `<div class="explain" translate="no">${esc(w.ex)}</div>` : ''}</div>${p != null ? '<button class="btn" data-act="denext">Дальше</button>' : ''}`;
+    ${p != null ? `<div class="explain" translate="no">${esc(w.ex)} ${spk(w.i, 'ex')}</div>` : ''}</div>${p != null ? '<button class="btn" data-act="denext">Дальше</button>' : ''}`;
   }
   function learnCard() {
     const x = stats();
     return `<div class="card"><div class="tag" style="margin-bottom:4px">🇩🇪 Немецкий для банкинга</div><p class="small mute" style="margin:0 0 8px;line-height:1.45">${x.n} терминов Fachbegriffe, интервью и фразы для писем. Выучено: ${x.known} из ${x.n} · к повторению: ${x.due}</p>
     <div class="grid2"><button class="btn" style="margin:0" data-act="dedeck">Карточки</button><button class="btn ghost" style="margin:0" data-act="dequizs">Тест</button></div>
-    <div class="grid2" style="margin-top:8px"><button class="btn ghost" style="margin:0" data-act="deint">Интервью на немецком</button><button class="btn ghost" style="margin:0" data-act="deview">Список слов</button></div></div>`;
+    <div class="grid2" style="margin-top:8px"><button class="btn ghost" style="margin:0" data-act="deint">Интервью на немецком</button><button class="btn ghost" style="margin:0" data-act="deview">Список слов</button></div>
+    <button class="btn ghost" style="margin:8px 0 0" data-act="deartq">der · die · das: тренировка артиклей</button></div>`;
   }
   const termLine = k => { const w = W.find(x => x.k === k); return w ? `<p class="small" style="margin:12px 0 0" translate="no">🇩🇪 <b>${deHtml(w.de)}</b></p>` : ''; };
   const detail = w => `<div class="srmore" translate="no"><div>${deHtml(w.de)}</div><div class="small">${esc(gl(w))}</div><div class="small mute" style="margin-top:4px">${esc(w.ex)}</div></div>`;
@@ -227,6 +259,9 @@ const DEU = (() => {
       case 'dedeck': startDeck(); return true;
       case 'dequizs': startQuiz(); return true;
       case 'deview': startView(); return true;
+      case 'deartq': startArt(); return true;
+      case 'deart': artPick(D.g); return true;
+      case 'despeak': { const w = byId[D.i]; if (w) speak(D.p === 'ex' ? w.ex : w.de.replace(/^(der|die|das)\s/, (m) => m)); return true; }
       case 'deint': startInterview(); return true;
       case 'deflip': sess.flip = true; render(); return true;
       case 'deyes': grade(true); return true;
@@ -256,4 +291,9 @@ I18N.add([
   ['Ошибки вернутся в карточки уже сегодня.', 'Mistakes come back in the cards today.', 'Fehler kommen heute noch in den Karten wieder.', 'Səhvlər bu gün kartlarda qayıdacaq.'],
   ['Всё выучено на сегодня', 'Everything is done for today', 'Für heute ist alles gelernt', 'Bu gün üçün hər şey öyrənilib'],
   ['Бухучёт', 'Accounting', 'Rechnungswesen', 'Mühasibat'],
+  ['der · die · das: тренировка артиклей', 'der · die · das: article practice', 'der · die · das: Artikel üben', 'der · die · das: artikl məşqi'],
+  ['Артикли', 'Articles', 'Artikel', 'Artikllər'],
+  ['Какой артикль?', 'Which article?', 'Welcher Artikel?', 'Hansı artikl?'],
+  ['Озвучка недоступна на этом устройстве', 'Speech is not available on this device', 'Sprachausgabe ist auf diesem Gerät nicht verfügbar', 'Bu cihazda səsləndirmə mövcud deyil'],
+  ['Озвучить', 'Read aloud', 'Vorlesen', 'Səsləndir'],
 ]);
