@@ -18,6 +18,7 @@ const ICONS = {
   news: '<path d="M4 5h13a3 3 0 013 3v11H6a2 2 0 01-2-2zM8 9h8M8 13h8"/>',
   book: '<path d="M5 4h11a3 3 0 013 3v13H8a3 3 0 01-3-3zM5 17a3 3 0 013-3h11M9 8h6"/>',
   jobs: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a2 2 0 012-2h2a2 2 0 012 2v2M3 13h18"/>',
+  words: '<path d="M4 5a2 2 0 012-2h13v16H6a2 2 0 00-2 2zM4 19a2 2 0 002 2h13"/>', gram: '<path d="M4 5h13a3 3 0 013 3v11H6a2 2 0 01-2-2zM8 9h8M8 13h8"/>', prog: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>',
   goals: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/>',
 };
 
@@ -27,7 +28,7 @@ let S = load();
 function normalize(s) {
   s = s || { xp: 0, days: {}, lessons: [], boxes: {}, miss: {}, goals: DEFAULT_GOALS, remind: '19:00', best: 0 };
   // значения по умолчанию для полей, добавленных позже (работает и для старых сохранений, и после сброса)
-  for (const [k, v] of Object.entries({ apps: {}, seen: [], items: {}, topics: {}, wrong: {}, focus: [], stats: {}, misc: {}, events: [], requests: [], reqDel: [], later: [], read: {}, pos: {}, contacts: [], cases: {}, mm: {}, cl: {}, mycards: [], badges: {}, diary: [] })) s[k] = s[k] || v;
+  for (const [k, v] of Object.entries({ apps: {}, seen: [], items: {}, topics: {}, wrong: {}, focus: [], stats: {}, misc: {}, events: [], requests: [], reqDel: [], later: [], read: {}, pos: {}, contacts: [], cases: {}, mm: {}, cl: {}, mycards: [], badges: {}, diary: [], dl: { w: {}, my: [], days: {} } })) s[k] = s[k] || v;
   for (const k of ['hour', 'time', 'ms']) s.stats[k] = s.stats[k] || {};
   // свои карточки из книг попадают в общий набор (и после загрузки состояния из облака)
   const nc = s.mycards.filter(c => !CARDS.some(y => y.id === c.id)); if (nc.length) { CARDS.push(...nc.map(c => ({ ...c }))); registerAll(); }
@@ -175,7 +176,9 @@ views.jobs = () => {
 // ---------- навигация ----------
 let tab = 'today', jobsFrom = 'goals', sess = null, prevTab = 'today', lastKey = '', lastNav = '', lastSub = '', subT = null, booting = true, enterT = null;
 const TABS = [['today', 'Сегодня'], ['learn', 'Учёба'], ['book', 'Книга'], ['news', 'Новости'], ['goals', 'Прогресс']];
-function go(t) { XT.stop(); LIB.stopListen(); if (t === 'jobs' && tab !== 'jobs') jobsFrom = tab === 'jobs' ? 'goals' : tab; FX.iv.stop(); LIB.closeSheet(); if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
+const TABS_DE = [['today', 'Сегодня'], ['words', 'Слова'], ['gram', 'Грамматика'], ['book', 'Книга'], ['prog', 'Программа']];
+const tabsNow = () => S.mode === 'de' ? TABS_DE : TABS;
+function go(t) { if (S.mode === 'de') t = { learn: 'words', news: 'today', goals: 'prog' }[t] || t; XT.stop(); LIB.stopListen(); if (t === 'jobs' && tab !== 'jobs') jobsFrom = tab === 'jobs' ? 'goals' : tab; FX.iv.stop(); LIB.closeSheet(); if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
 let authErr = '';
 const RU_ERR = { 'Invalid login credentials': 'Неверный email или пароль', 'User already registered': 'Такой аккаунт уже есть, нажми «Войти»', 'Email not confirmed': 'Подтверди почту по письму, затем войди' };
 function authHtml() {
@@ -236,7 +239,7 @@ function hideSplash() {
 
 function render() {
   if (CLOUD.enabled && !CLOUD.on && !S.localOnly) { $('#nav').innerHTML = ''; lastNav = ''; $('#app').innerHTML = authHtml(); return; }
-  if (lastNav !== tab) { $('#nav').innerHTML = TABS.map(([k, l]) => `<button class="${tab === k || (k === 'goals' && (tab === 'jobs' || tab === 'net' || tab === 'diary')) ? 'on' : ''}" data-go="${k}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${l}</button>`).join(''); lastNav = tab; }
+  if (lastNav !== tab) { $('#nav').innerHTML = tabsNow().map(([k, l]) => `<button class="${tab === k || (k === 'goals' && (tab === 'jobs' || tab === 'net' || tab === 'diary')) ? 'on' : ''}" data-go="${k}"><svg viewBox="0 0 24 24">${ICONS[k]}</svg>${l}</button>`).join(''); lastNav = tab; }
   const key = sess ? sess.type === 'mm' ? 'mm:' + sess.phase : sess.type === 'de' ? 'de:' + sess.mode : sess.type === 'case' ? 'case:' + (sess.i < 0 ? 'i' : sess.i >= sess.c.steps.length ? 'e' : 'q') : sess.type + ':' + (sess.type === 'lesson' ? (sess.i < sess.l.cards.length ? 'r' + sess.i : 'q' + sess.qi) : (sess.qi ?? sess.i ?? '')) : tab === 'book' ? 'book:' + (LIB.cur() || '') : tab;
   const enter = key !== lastKey; lastKey = key;
   const app = $('#app');
@@ -279,6 +282,9 @@ views.today = () => {
   <div class="heat">${days.map(v => `<i class="${v ? 'l' + v : ''}"></i>`).join('')}</div><p class="small mute" style="margin:8px 0 0">Последние 6 недель</p></div>`;
 };
 
+const bankToday = views.today;
+views.today = () => S.mode === 'de' ? DL.todayHtml() : bankToday();
+
 function coachCard() {
   const w = T.weakest();
   if (!w) return '<div class="card"><div class="tag">Тренер</div><p style="margin:6px 0 0;line-height:1.5">Ответь на несколько задач, и я начну подбирать тренировки под твои слабые места.</p></div>';
@@ -287,6 +293,10 @@ function coachCard() {
 views.interview = () => FX.iv.html();
 views.diary = () => DV.html();
 views.qrev = () => MX.qrevHtml();
+views.dl = () => DL.sessHtml();
+views.words = () => DL.html('words');
+views.gram = () => DL.html('gram');
+views.prog = () => DL.html('prog');
 views.mm = () => XT.mmHtml();
 views.case = () => XT.caseHtml();
 views.net = () => XT.netHtml();
@@ -294,6 +304,7 @@ views.de = () => DEU.html();
 views.book = () => LIB.html();
 // сегменты внутри вкладок «Учёба», «Новости», «Прогресс»: переключатель под заголовком, выбор запоминается
 const SEGS = {
+  words: [['learn', 'Карточки'], ['list', 'Список'], ['dict', 'Словарь'], ['mine', 'Мои слова']],
   learn: [['concepts', 'Концепции'], ['branches', 'Ветки'], ['terms', 'Цитаты и слова']],
   news: [['market', 'Рынок'], ['deals', 'Сделки недели']],
   goals: [['overview', 'Обзор'], ['work', 'Работа'], ['stats', 'Аналитика']],
@@ -459,6 +470,7 @@ views.settings = () => {
   <div class="row" style="margin-top:12px;gap:8px"><button class="pill" data-act="photopick">📷 ${S.photo ? 'Изменить фото' : 'Добавить фото'}</button>${S.photo ? '<button class="pill" data-act="photodel">Удалить фото</button>' : ''}</div>
   <input type="text" id="nm" placeholder="Как к тебе обращаться" value="${esc(S.name || '')}" style="margin-top:12px">
   <div class="grid2" style="margin-top:12px">${stat('Уровень', L.name)}${stat('Опыт', S.xp, 1)}${stat('Серия', streak(), 1)}${stat('Лучшая серия', Math.max(S.best, streak()), 1)}</div></div>
+  <div class="card"><h2>Режим приложения</h2><div class="seg"><button class="${S.mode !== 'de' ? 'on' : ''}" data-act="modeset" data-v="bank">Банкинг</button><button class="${S.mode === 'de' ? 'on' : ''}" data-act="modeset" data-v="de">Немецкий</button></div><p class="small mute" style="margin:10px 0 0;line-height:1.5">«Немецкий» оставляет только изучение языка: слова, грамматика, книги. Вернуться можно кнопкой «Банкинг» в левом верхнем углу.</p></div>
   <div class="card"><h2>Язык интерфейса</h2><div class="seg">${I18N.list.map(l => `<button class="${I18N.lang === l ? 'on' : ''}" data-lang="${l}" translate="no">${I18N.names[l]}</button>`).join('')}</div><p class="small mute" style="margin:10px 0 0;line-height:1.5">Переводится интерфейс. Уроки, задачи, глоссарий и книга пока на русском.</p></div>
   <div class="card"><h2>Тема оформления</h2><div class="themes">${THEME_LIST.map(t => `<button class="theme ${cur === t.id ? 'on' : ''}" data-th="${t.id}">${sw(t)}${t.name}</button>`).join('')}</div>
   <p class="small mute" style="margin:10px 0 0;line-height:1.5">«Авто» следует за темой iPhone.</p></div>
@@ -601,6 +613,7 @@ document.addEventListener('click', e => {
   switch (D.act) {
     case 'exit': return go(tab);
     case 'jview': jobView = D.v; return render();
+    case 'modeset': S.mode = D.v; save(); lastNav = ''; toast(D.v === 'de' ? 'Режим: немецкий' : 'Режим: банкинг'); return go('today');
     case 'tseg': setSeg(D.t, D.v); save(); render(); return window.scrollTo(0, 0);
     case 'tcat': S.seg = { ...(S.seg || {}), tcat: D.v }; save(); return render();
     case 'jbopen': jobFilter = D.col; jobOpen = D.id; jobView = 'list'; return render();
@@ -672,7 +685,7 @@ document.addEventListener('click', e => {
     }
     case 'clearlog': if (confirm(tr('Удалить журнал событий? Статистика по темам останется.'))) T.clearLog(); return;
     case 'reset': if (confirm(tr('Удалить весь прогресс?'))) { localStorage.removeItem(KEY); S = load(); save(); render(); } return;
-    default: if (FX.act(D.act, D) || LIB.act(D.act, D) || XT.act(D.act, D) || DEU.act(D.act, D) || ACH.act(D.act, D) || MX.act(D.act, D) || DV.act(D.act, D)) return;
+    default: if (FX.act(D.act, D) || LIB.act(D.act, D) || XT.act(D.act, D) || DEU.act(D.act, D) || ACH.act(D.act, D) || MX.act(D.act, D) || DV.act(D.act, D) || DL.act(D.act, D)) return;
   }
 });
 
