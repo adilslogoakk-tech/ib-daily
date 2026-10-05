@@ -241,10 +241,10 @@ function render() {
   const enter = key !== lastKey; lastKey = key;
   const app = $('#app');
   app.innerHTML = (sess || tab === 'settings' || (tab === 'book' && LIB.cur()) ? '' : `<button class="avatar srchb" data-act="srchopen" aria-label="Поиск">🔍</button><button class="avatar" data-go="settings" aria-label="Профиль и настройки"${avStyle()}>${avInner()}</button>`) + (sess ? views[sess.type]() : views[tab]());
-  if (!sess && tab === 'news') { loadNews(); XT.dealsLoad(); }
+  if (!sess && tab === 'news') { if (segOf('news') === 'market') loadNews(); XT.dealsLoad(); }
   if (!enter) app.classList.remove('enter'); else if (!booting && animOn()) enterView();
   // переключение внутри экрана (Позже / Главы / Книги, язык): плавно показываем только содержимое под переключателем
-  const sub = (tab === 'book' ? LIB.sub() : '') + '|' + I18N.lang;
+  const sub = (tab === 'book' ? LIB.sub() : SEGS[tab] ? segOf(tab) : '') + '|' + I18N.lang;
   if (!enter && sub !== lastSub && !booting && animOn()) { app.classList.remove('sub'); void app.offsetWidth; app.classList.add('sub'); clearTimeout(subT); subT = setTimeout(() => app.classList.remove('sub'), 300); }
   lastSub = sub;
   if (document.getElementById('weekbox')) FX.week.fill();
@@ -292,24 +292,38 @@ views.case = () => XT.caseHtml();
 views.net = () => XT.netHtml();
 views.de = () => DEU.html();
 views.book = () => LIB.html();
+// сегменты внутри вкладок «Учёба», «Новости», «Прогресс»: переключатель под заголовком, выбор запоминается
+const SEGS = {
+  learn: [['concepts', 'Концепции'], ['branches', 'Ветки'], ['terms', 'Цитаты и слова']],
+  news: [['market', 'Рынок'], ['deals', 'Сделки недели']],
+  goals: [['overview', 'Обзор'], ['work', 'Работа'], ['stats', 'Аналитика']],
+};
+const segOf = t => (S.seg && SEGS[t].some(x => x[0] === S.seg[t]) && S.seg[t]) || SEGS[t][0][0];
+const setSeg = (t, v) => { S.seg = { ...(S.seg || {}), [t]: v }; };
+const segBar = t => `<div class="seg wide">${SEGS[t].map(([k, l]) => `<button class="${segOf(t) === k ? 'on' : ''}" data-act="tseg" data-t="${t}" data-v="${k}">${l}</button>`).join('')}</div>`;
 const IBL = () => LESSONS.filter(l => !['cfa', 'de'].includes(l.topic));
-views.learn = () => `
-  <div class="tag">Учёба</div><h1>Концепции</h1><p class="sub">${IBL().filter(l => S.lessons.includes(l.id)).length} из ${IBL().length} уроков пройдено · ${DRILLS.filter(d => !['cfa', 'de'].includes(d.topic)).length} задач · ${CARDS.filter(c => !['cfa', 'de'].includes(c.topic)).length} карточек</p>${IBL().every(l => S.lessons.includes(l.id)) ? '<div class="card banner"><b>Все уроки пройдены</b><p class="sub" style="color:var(--mute)">Дальше идёт повторение. Новые уроки добавим позже.</p></div>' : ''}
+// термины по темам: нажатие открывает то же всплывающее объяснение, что и в тексте
+const termsCard = () => { const cat = (S.seg && S.seg.tcat) || 'val'; return `<div class="card"><div class="tag" style="margin-bottom:8px">Термины по темам</div><div class="sts">${Object.entries(CATS).map(([k, c]) => `<button class="st ${cat === k ? 'on' : ''}" data-act="tcat" data-v="${k}">${c.ic} ${c.name}</button>`).join('')}</div><div style="margin-top:12px">${GLOSS.filter(g => g.c === cat).map(g => `<span class="k k-${cat}" data-term="${g.k}" style="display:inline-block;margin:0 6px 8px 0">${esc(LIB.byKey(g.k).t)}</span>`).join('')}</div></div>`; };
+views.learn = () => {
+  const sg = segOf('learn'), lbl = SEGS.learn.find(x => x[0] === sg)[1];
+  return `<div class="tag">Учёба</div><h1>${lbl}</h1>${sg === 'concepts' ? `<p class="sub">${IBL().filter(l => S.lessons.includes(l.id)).length} из ${IBL().length} уроков пройдено · ${DRILLS.filter(d => !['cfa', 'de'].includes(d.topic)).length} задач · ${CARDS.filter(c => !['cfa', 'de'].includes(c.topic)).length} карточек</p>` : ''}${segBar('learn')}
+  ${sg === 'concepts' ? `${IBL().every(l => S.lessons.includes(l.id)) ? '<div class="card banner"><b>Все уроки пройдены</b><p class="sub" style="color:var(--mute)">Дальше идёт повторение. Новые уроки добавим позже.</p></div>' : ''}
   <div class="grid2" style="margin-top:14px"><button class="btn ghost" style="margin:0" data-start="drill-free">🧮 Задачи</button><button class="btn ghost" style="margin:0" data-start="cards">🃏 Карточки</button></div>
   <button class="btn" style="margin-top:10px" data-start="interview">🎤 Режим собеседования</button>
-  ${MX.quoteCard()}
-  ${DEU.learnCard()}
-  ${XT.learnCards()}
-  <div class="card"><div class="tag" style="margin-bottom:8px">Цветовая карта терминов</div><div class="legend">${Object.entries(CATS).map(([k, c]) => `<span class="k k-${k}">${c.ic} ${c.name}</span>`).join('')}</div><p class="small mute" style="margin:10px 0 0">Один цвет — одна группа понятий. Запоминай по цвету.</p></div>
-  <div class="card" style="padding:6px 16px">${IBL().map(l => `<div class="goal" data-lesson="${l.id}" style="cursor:pointer;align-items:center;border-left:3px solid var(--c-${l.cat || LESSON_CAT[l.id] || 'val'});padding-left:12px"><div class="chk" style="${S.lessons.includes(l.id) ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${S.lessons.includes(l.id) ? '✓' : ''}</div><div><div class="tag">${l.tag}</div><div style="font-weight:600">${l.title}</div></div></div>`).join('')}</div>`;
+  <div class="card" style="padding:6px 16px">${IBL().map(l => `<div class="goal" data-lesson="${l.id}" style="cursor:pointer;align-items:center;border-left:3px solid var(--c-${l.cat || LESSON_CAT[l.id] || 'val'});padding-left:12px"><div class="chk" style="${S.lessons.includes(l.id) ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${S.lessons.includes(l.id) ? '✓' : ''}</div><div><div class="tag">${l.tag}</div><div style="font-weight:600">${l.title}</div></div></div>`).join('')}</div>`
+  : sg === 'branches' ? `${DEU.learnCard()}${XT.learnCards()}`
+  : `${MX.quoteCard()}${termsCard()}<div class="card"><div class="tag" style="margin-bottom:8px">Цветовая карта терминов</div><div class="legend">${Object.entries(CATS).map(([k, c]) => `<span class="k k-${k}">${c.ic} ${c.name}</span>`).join('')}</div><p class="small mute" style="margin:10px 0 0">Один цвет — одна группа понятий. Запоминай по цвету.</p></div>`}`;
+};
 
-views.news = () => `
-  <div class="tag">Рынок</div><h1>Новости и данные</h1><p class="sub" id="newsmeta"></p>
-  <div class="card"><div class="ticker" id="fx"><span class="small mute">Загрузка…</span></div></div>
-  ${XT.dealsCard()}
+views.news = () => {
+  const sg = segOf('news');
+  return `<div class="tag">${sg === 'market' ? 'Рынок' : 'Сделки недели'}</div><h1>${sg === 'market' ? 'Новости и данные' : 'Разбор сделок'}</h1>${sg === 'market' ? '<p class="sub" id="newsmeta"></p>' : ''}${segBar('news')}
+  ${sg === 'market' ? `<div class="card"><div class="ticker" id="fx"><span class="small mute">Загрузка…</span></div></div>
   <div class="card" id="newslist"><span class="small mute">Загрузка…</span></div>
   <button class="btn ghost" data-act="newsdone" ${done('news') ? 'disabled' : ''}>${done('news') ? '✓ Шаг засчитан' : 'Я прочитал(а) — засчитать шаг'}</button>
-  <div class="card"><div class="tag">Подумай</div><p style="margin:6px 0 0;line-height:1.5">Выбери одну новость: как она влияет на оценку компании — через денежные потоки, WACC или мультипликатор?</p></div>`;
+  <div class="card"><div class="tag">Подумай</div><p style="margin:6px 0 0;line-height:1.5">Выбери одну новость: как она влияет на оценку компании — через денежные потоки, WACC или мультипликатор?</p></div>`
+  : `${XT.dealsCard()}<p class="small mute" style="line-height:1.5">Разбор крупных сделок недели: как их оценить и что спросят на интервью. Обновляется по понедельникам.</p>`}`;
+};
 
 const EV_TYPES = { test: 'Онлайн-тест', interview: 'Интервью', ac: 'Assessment center', exam: 'Экзамен', other: 'Другое' };
 const newDraft = () => ({ jobId: '', type: 'test', date: '', time: '10:00', title: '', topics: [], prep: true });
@@ -403,7 +417,7 @@ function icsEvent(e) {
     'BEGIN:VALARM', 'TRIGGER:-P1D', 'ACTION:DISPLAY', 'DESCRIPTION:Завтра: ' + e.title, 'END:VALARM', 'BEGIN:VALARM', 'TRIGGER:-PT1H', 'ACTION:DISPLAY', 'DESCRIPTION:Через час: ' + e.title, 'END:VALARM', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
   location.href = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
 }
-const SEC = { book: 'Книга', interview: 'Собеседование', today: 'Сегодня', learn: 'Учёба', lesson: 'Уроки', drill: 'Задачи', cards: 'Карточки', jobs: 'Вакансии', news: 'Новости', goals: 'Прогресс' };
+const SEC = { de: 'Немецкий', mm: 'Ментальная математика', case: 'Кейсы', book: 'Книга', interview: 'Собеседование', today: 'Сегодня', learn: 'Учёба', lesson: 'Уроки', drill: 'Задачи', cards: 'Карточки', jobs: 'Вакансии', news: 'Новости', goals: 'Прогресс' };
 function insights() {
   const rows = T.topicRows(), rec = T.recurring(), bh = T.bestHour(), tw = Object.entries(T.timeByWeek()).sort((a, b) => b[1] - a[1]);
   const col = k => k < 0.4 ? 'var(--red)' : k < 0.7 ? 'var(--c-val)' : 'var(--green)';
@@ -412,26 +426,26 @@ function insights() {
   <div class="card"><h2>Карта знаний</h2>${rows.map(r => `<div style="margin:10px 0 0"><div class="row sp"><span>${r.name}</span><span class="small mute">${!r.n ? 'нет данных' : r.n < 3 ? 'мало данных' : Math.round(r.know * 100) + '%'}</span></div><div class="bar" style="margin:4px 0 0"><i style="width:${r.n >= 3 ? Math.round(r.know * 100) : 0}%;background:${col(r.know)}"></i></div>${r.n >= 3 && r.sp > 1.3 ? '<span class="small mute">⏱ медленнее твоей нормы</span>' : ''}</div>`).join('')}
   <p class="small mute" style="margin:12px 0 0">Оценка осторожная: пока ответов мало, показываем «мало данных».</p></div>
   ${rec.length ? `<div class="card"><h2>Повторяющиеся ошибки</h2>${rec.map(r => `<div style="margin:10px 0 0"><div class="small mute">${TOPICS[ITEMS[r.id].topic].name} · ${r.c} раза</div><div style="font-weight:500;margin:2px 0">${hl(ITEMS[r.id].q)}</div><div class="small">Ты выбирал(а): <b>${esc(r.pick)}</b></div>${ITEMS[r.id].e ? `<div class="explain">${hl(ITEMS[r.id].e)}</div>` : ''}</div>`).join('')}</div>` : ''}
-  <div class="card"><h2>Привычки</h2>${tw.length ? `<p class="small" style="margin:0 0 6px">За 7 дней: ${tw.map(([k, v]) => `${SEC[k] || k} ${Math.max(1, Math.round(v / 60))} мин`).join(' · ')}</p>` : '<p class="small mute" style="margin:0">Пока нет данных.</p>'}
+  <div class="card"><h2>Привычки</h2>${tw.length ? `<p class="small" style="margin:0 0 6px">За 7 дней: ${tw.map(([k, v]) => `${tr(SEC[k] || k)} ${Math.max(1, Math.round(v / 60))} ${tr('мин')}`).join(' · ')}</p>` : '<p class="small mute" style="margin:0">Пока нет данных.</p>'}
   ${bh ? `<p class="small" style="margin:0">Лучше всего отвечаешь около ${bh.h}:00 (${Math.round(bh.p * 100)}% верно).</p>` : ''}</div>
   <div class="card"><h2>Мой фокус</h2><p class="sub" style="margin-bottom:10px">Отмеченные темы получают приоритет в подборе.</p><div class="sts">${Object.entries(TOPICS).map(([k, c]) => `<button class="st ${S.focus.includes(k) ? 'on' : ''}" data-focus="${k}">${c.name}</button>`).join('')}</div></div>`;
 }
 views.goals = () => {
-  const L = level();
-  return `<div class="tag">Прогресс</div><h1>Мой путь в IB</h1><p class="sub">Phase 0: стажировка Big4 TS / M&amp;A, CFA L1, нетворкинг</p>
-  <div class="grid2" style="margin-top:14px"><div class="stat"><span class="small mute">Серия</span><b data-count="${streak()}">${streak()}</b></div><div class="stat"><span class="small mute">Лучшая серия</span><b data-count="${Math.max(S.best, streak())}">${Math.max(S.best, streak())}</b></div><div class="stat"><span class="small mute">Всего XP</span><b data-count="${S.xp}">${S.xp}</b></div><div class="stat"><span class="small mute">Уровень</span><b style="font-size:19px">${L.name}</b></div></div>
+  const L = level(), sg = segOf('goals'), cnt = {}; JOBS.jobs.forEach(j => { const k = jstat(j); cnt[k] = (cnt[k] || 0) + 1; });
+  return `<div class="tag">Прогресс</div><h1>Мой путь в IB</h1><p class="sub">Phase 0: стажировка Big4 TS / M&amp;A, CFA L1, нетворкинг</p>${segBar('goals')}
+  ${sg === 'overview' ? `<div class="grid2" style="margin-top:14px"><div class="stat"><span class="small mute">Серия</span><b data-count="${streak()}">${streak()}</b></div><div class="stat"><span class="small mute">Лучшая серия</span><b data-count="${Math.max(S.best, streak())}">${Math.max(S.best, streak())}</b></div><div class="stat"><span class="small mute">Всего XP</span><b data-count="${S.xp}">${S.xp}</b></div><div class="stat"><span class="small mute">Уровень</span><b style="font-size:19px">${L.name}</b></div></div>
   ${MX.weeklyCard()}
-  ${ACH.html()}
+  ${ACH.html()}`
+  : sg === 'work' ? `<div class="card" data-go="jobs" style="cursor:pointer"><div class="row sp"><div><div class="tag">Вакансии</div><div style="font-size:17px;font-weight:600;margin-top:2px">Вакансии и заявки</div><div class="small mute">${JOBS.jobs.length} вакансий · сегодня подано ${appsToday()} из ${DAILY_APPS}</div></div><span style="font-size:22px">›</span></div>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-top:10px">${['applied', 'reply', 'exam', 'offer', 'rejected'].map(k => `<span class="pill"><span>${ST[k]}</span> <b>${cnt[k] || 0}</b></span>`).join('')}</div></div>
   ${DV.card()}
-  <div class="card" data-go="jobs" style="cursor:pointer"><div class="row sp"><div><div class="tag">Вакансии</div><div style="font-size:17px;font-weight:600;margin-top:2px">Вакансии и заявки</div><div class="small mute">${JOBS.jobs.length} вакансий · сегодня подано ${appsToday()} из ${DAILY_APPS}</div></div><span style="font-size:22px">›</span></div></div>
   ${XT.netProgress()}
   ${FX.week.card()}
   ${eventsCard()}
-  ${requestsCard()}
-  ${insights()}
+  ${requestsCard()}`
+  : `${insights()}
   <div class="card"><h2>Чек-лист</h2>${S.goals.map(g => `<div class="goal ${g.done ? 'done' : ''}"><div class="chk" data-goal="${g.id}">${g.done ? '✓' : ''}</div><span style="flex:1">${esc(g.t)}</span><button data-del="${g.id}" style="background:none;color:var(--mute);font-size:18px">×</button></div>`).join('')}
-  <div class="row" style="margin-top:12px"><input type="text" id="newgoal" placeholder="Новая цель"><button class="pill" data-act="addgoal" style="flex:none">Добавить</button></div></div>
-`;
+  <div class="row" style="margin-top:12px"><input type="text" id="newgoal" placeholder="Новая цель"><button class="pill" data-act="addgoal" style="flex:none">Добавить</button></div></div>`}`;
 };
 
 views.settings = () => {
@@ -587,6 +601,8 @@ document.addEventListener('click', e => {
   switch (D.act) {
     case 'exit': return go(tab);
     case 'jview': jobView = D.v; return render();
+    case 'tseg': setSeg(D.t, D.v); save(); render(); return window.scrollTo(0, 0);
+    case 'tcat': S.seg = { ...(S.seg || {}), tcat: D.v }; save(); return render();
     case 'jbopen': jobFilter = D.col; jobOpen = D.id; jobView = 'list'; return render();
     case 'lnext': T.track('read', { lesson: s.l.id, i: s.i, ms: T.elapsed(), len: s.l.cards[s.i].length }); s.i++; return render();
     case 'lans': case 'dans':
@@ -638,7 +654,7 @@ document.addEventListener('click', e => {
       T.shareFile('ib-daily-requests-' + dkey() + '.json', JSON.stringify(payload)).then(ok => { if (ok) { pend.forEach(r => { r.sent = Date.now(); }); save(); T.track('requests_sent', { n: pend.length }); render(); } });
       return;
     }
-    case 'evjob': { const j = JOBS.jobs.find(x => x.id === D.id); evDraft = { ...newDraft(), jobId: j.id, title: j.company + ': ' + j.title.slice(0, 40), topics: evSuggest(j.id, 'test') }; go('goals'); const f = $('#evform'); if (f) f.scrollIntoView(); return; }
+    case 'evjob': { setSeg('goals', 'work'); const j = JOBS.jobs.find(x => x.id === D.id); evDraft = { ...newDraft(), jobId: j.id, title: j.company + ': ' + j.title.slice(0, 40), topics: evSuggest(j.id, 'test') }; go('goals'); const f = $('#evform'); if (f) f.scrollIntoView(); return; }
     case 'evdel': S.events = S.events.filter(x => x.id !== D.id); dropRequests(r => r.eventId === D.id); save(); return render();
     case 'reqdel': dropRequests(r => r.id === D.id); save(); return render();
     case 'evics': return icsEvent(S.events.find(x => x.id === D.id));

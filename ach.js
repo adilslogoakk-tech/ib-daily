@@ -76,6 +76,10 @@ const ACH = (() => {
 })();
 
 I18N.add([
+  ['Ветки', 'Tracks', 'Zweige', 'Qollar'], ['Цитаты и слова', 'Quotes and terms', 'Zitate und Begriffe', 'Sitatlar və terminlər'],
+  ['Обзор', 'Overview', 'Überblick', 'İcmal'], ['Работа', 'Job search', 'Jobsuche', 'İş axtarışı'], ['Аналитика', 'Analytics', 'Analyse', 'Analitika'],
+  ['Термины по темам', 'Terms by topic', 'Begriffe nach Thema', 'Mövzular üzrə terminlər'], ['Разбор сделок', 'Deal breakdowns', 'Deal-Analysen', 'Sövdələşmə təhlili'],
+  ['Разбор крупных сделок недели: как их оценить и что спросят на интервью. Обновляется по понедельникам.', 'Breakdowns of the week\'s big deals: how to value them and what interviewers ask. Updated on Mondays.', 'Analysen der großen Deals der Woche: wie man sie bewertet und was im Interview gefragt wird. Aktualisierung montags.', 'Həftənin böyük sövdələşmələrinin təhlili: necə qiymətləndirmək və müsahibədə nə soruşulur. Bazar ertəsi yenilənir.'],
   ['Ответ получен', 'Reply received', 'Antwort erhalten', 'Cavab alınıb'],
   ['Оффер', 'Offer', 'Angebot', 'Təklif'],
   ['Первый оффер', 'First offer', 'Erstes Angebot', 'İlk təklif'],
