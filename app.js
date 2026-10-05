@@ -101,15 +101,18 @@ const hl = s => esc(s).replace(TERM_RE, m => {
 
 const views = {};
 // ---------- вакансии ----------
-const ST = { new: 'Не подано', applied: 'Подано', exam: 'Тест / интервью', rejected: 'Отказ', excluded: 'Исключено' };
+const ST = { new: 'Не подано', applied: 'Подано', reply: 'Ответ получен', exam: 'Тест / интервью', offer: 'Оффер', rejected: 'Отказ', excluded: 'Исключено' };
 const DAILY_APPS = 3;
 let JOBS = (() => { try { return JSON.parse(localStorage.getItem('ibdaily.jobs')) || { jobs: [] }; } catch (e) { return { jobs: [] }; } })();
-let jobFilter = 'new', jobQuery = '', jobOpen = null;
+let jobFilter = 'new', jobQuery = '', jobOpen = null, jobView = 'list';
 // статус = то, что ты поставил на телефоне, пока Excel не изменился; иначе берём Excel
 const jstat = j => { const o = S.apps[j.id]; return o && o.base === j.status ? o.s : j.status; };
 // день, когда вакансия стала «подал»: с телефона (o.ap / ts) или по дате, когда синхронизатор увидел «Подал» в Excel (j.since)
 const appDay = j => { const o = S.apps[j.id]; return o && o.base === j.status ? (o.s === 'applied' ? o.ap || (o.ts ? dkey(new Date(o.ts)) : '') : '') : j.status === 'applied' ? j.since || '' : ''; };
 const appsToday = () => JOBS.jobs.filter(j => appDay(j) === dkey()).length;
+// день последнего шага по заявке: с телефона (ts) или когда синхронизатор увидел статус из Excel (since)
+const stepDay = j => { const o = S.apps[j.id]; return o && o.base === j.status ? (o.ts ? dkey(new Date(o.ts)) : '') : (j.since || ''); };
+const ago = d => { if (!d) return ''; const n = Math.round((Date.parse(dkey() + 'T00:00:00Z') - Date.parse(d + 'T00:00:00Z')) / 864e5); return n <= 0 ? 'сегодня' : n === 1 ? 'вчера' : n + ' дн. назад'; };
 function setStatus(id, st) {
   const j = JOBS.jobs.find(x => x.id === id); if (!j) return;
   const was = jstat(j);
@@ -144,14 +147,18 @@ function jobsList() {
   if (!list.length) return '<p class="small mute" style="text-align:center;padding:24px 0">Здесь пусто</p>';
   return list.map(j => {
     const st = jstat(j), open = jobOpen === j.id;
-    return `<div class="job ${open ? 'open' : ''}"><div class="jh" data-job="${j.id}"><div style="flex:1;min-width:0"><div class="small mute">${esc(j.company)} · ${esc(String(j.location).split('(')[0])}</div><div class="jt">${fresh.has(j.id) ? '<span class="new">NEW</span> ' : ''}${esc(j.title)}</div></div><div class="match">${j.match ?? '–'}<small>%</small></div></div>
+    return `<div class="job ${open ? 'open' : ''}"><div class="jh" data-job="${j.id}"><div style="flex:1;min-width:0"><div class="small mute">${esc(j.company)} · ${esc(String(j.location).split('(')[0])}</div><div class="jt">${fresh.has(j.id) ? '<span class="new">NEW</span> ' : ''}${esc(j.title)}</div>${st !== 'new' && st !== 'excluded' && stepDay(j) ? `<div class="small mute"><span>${ST[st]}</span> · <span>${ago(stepDay(j))}</span></div>` : ''}</div><div class="match">${j.match ?? '–'}<small>%</small></div></div>
     ${open ? `<div class="jb"><div class="small mute" style="margin-bottom:8px">${esc(j.type || '')} · ${esc(j.category || '')} · ${esc(j.posted || '')} · ${esc(j.source || '')}</div>
       ${j.lang ? `<p class="small"><b>Язык:</b> ${esc(j.lang)}</p>` : ''}${j.pay ? `<p class="small"><b>Оплата:</b> ${esc(j.pay)}</p>` : ''}${j.resume ? `<p class="small"><b>CV:</b> ${esc(j.resume)}</p>` : ''}
       <a class="btn ghost" style="display:block;text-align:center;text-decoration:none;margin:8px 0" href="${esc(j.link)}" target="_blank" rel="noopener">Открыть вакансию ↗</a>
       ${reportBtn(j)}${XT.letterBtn(j)}${XT.letterHtml(j)}<button class="btn ghost" style="margin:0 0 8px" data-act="evjob" data-id="${j.id}">📅 Назначить тест или интервью</button>
       ${st === 'applied' ? FX.fu.cardBlock(j) : ''}
-      <div class="sts">${['applied', 'exam', 'rejected', 'new'].map(k => `<button class="st ${st === k ? 'on' : ''}" data-st="${k}" data-id="${j.id}">${k === 'new' ? 'Сбросить' : ST[k]}</button>`).join('')}</div></div>` : ''}</div>`;
+      <div class="sts">${['applied', 'reply', 'exam', 'offer', 'rejected', 'new'].map(k => `<button class="st ${st === k ? 'on' : ''}" data-st="${k}" data-id="${j.id}">${k === 'new' ? 'Сбросить' : ST[k]}</button>`).join('')}</div></div>` : ''}</div>`;
   }).join('');
+}
+const BOARD = ['applied', 'reply', 'exam', 'offer', 'rejected'];
+function boardHtml() {
+  return `<div class="board">${BOARD.map(k => { const l = JOBS.jobs.filter(j => jstat(j) === k).sort((x, y) => stepDay(y).localeCompare(stepDay(x))); return `<div class="bcol"><div class="row sp"><b>${ST[k]}</b><span class="pill">${l.length}</span></div>${l.map(j => `<div class="bcard" data-act="jbopen" data-id="${j.id}" data-col="${k}"><div class="small mute">${esc(j.company)}</div><div style="font-weight:600;line-height:1.3;font-size:14px">${esc(j.title)}</div><div class="small mute">${ago(stepDay(j))}</div></div>`).join('') || '<p class="small mute">—</p>'}</div>`; }).join('')}</div>`;
 }
 views.jobs = () => {
   const cnt = {}; JOBS.jobs.forEach(j => { const k = jstat(j); cnt[k] = (cnt[k] || 0) + 1; });
@@ -159,9 +166,10 @@ views.jobs = () => {
   return `<div class="row"><button class="pill" data-go="${jobsFrom}">‹ Назад</button></div><div class="tag" style="margin-top:14px">Вакансии</div><h1>Мои заявки</h1><p class="sub">${JOBS.jobs.length ? 'Обновлено ' + new Date(JOBS.updated).toLocaleString(I18N.loc, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'Данные ещё не загружены'}</p>
   <div class="card"><div class="row sp"><b>Сегодня подано</b><span class="pill">${Math.min(n, 99)} из ${DAILY_APPS}</span></div><div class="bar" style="margin:10px 0 0"><i style="width:${Math.min(100, n / DAILY_APPS * 100)}%"></i></div></div>
   ${XT.analyticsHtml()}
-  <input type="text" id="jq" placeholder="Поиск по названию или компании" value="${esc(jobQuery)}">
+  <div class="seg wide" style="margin-top:12px"><button class="${jobView === 'list' ? 'on' : ''}" data-act="jview" data-v="list">Список</button><button class="${jobView === 'board' ? 'on' : ''}" data-act="jview" data-v="board">Доска</button></div>
+  ${jobView === 'board' ? boardHtml() : `<input type="text" id="jq" placeholder="Поиск по названию или компании" value="${esc(jobQuery)}">
   <div class="chips">${Object.keys(ST).map(k => `<button class="chip ${jobFilter === k ? 'on' : ''}" data-filter="${k}">${ST[k]} <b>${cnt[k] || 0}</b></button>`).join('')}</div>
-  <div class="card" style="padding:4px 14px" id="joblist">${jobsList()}</div>`;
+  <div class="card" style="padding:4px 14px" id="joblist">${jobsList()}</div>`}`;
 };
 
 // ---------- навигация ----------
@@ -368,7 +376,7 @@ function requestsCard() {
 }
 function eventsCard() {
   const list = T.upcoming(), d = evDraft;
-  const jobs = JOBS.jobs.filter(j => ['applied', 'exam'].includes(jstat(j))).sort((a, b) => a.company.localeCompare(b.company));
+  const jobs = JOBS.jobs.filter(j => ['applied', 'reply', 'exam'].includes(jstat(j))).sort((a, b) => a.company.localeCompare(b.company));
   return `<div class="card" id="evform"><h2>Тесты, интервью, экзамены</h2>
   ${list.length ? list.map(e => { const n = T.daysLeft(e.date); return `<div class="goal" style="align-items:center"><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3">${esc(e.title)}</div><div class="small mute">${EV_TYPES[e.type] || ''} · ${new Date(e.date + 'T00:00:00').toLocaleDateString(I18N.loc, { day: 'numeric', month: 'long' })} · <b style="color:${n <= 3 ? 'var(--c-val)' : 'inherit'}">${when(n)}</b></div><div class="small mute">${e.topics.map(k => TOPICS[k].name).join(', ')}</div>${planHtml(e)}</div><button class="pill" data-act="evics" data-id="${e.id}" title="В календарь">📅</button><button data-act="evdel" data-id="${e.id}" style="background:none;color:var(--mute);font-size:18px">×</button></div>`; }).join('') : '<p class="small mute" style="margin:0 0 8px">Событий пока нет. Добавь дату, и за 3 недели до неё темы подготовки получат приоритет в твоих тренировках.</p>'}
   <div style="margin-top:14px"><div class="tag" style="margin-bottom:6px">Добавить</div>
@@ -408,6 +416,7 @@ views.goals = () => {
   const L = level();
   return `<div class="tag">Прогресс</div><h1>Мой путь в IB</h1><p class="sub">Phase 0: стажировка Big4 TS / M&amp;A, CFA L1, нетворкинг</p>
   <div class="grid2" style="margin-top:14px"><div class="stat"><span class="small mute">Серия</span><b data-count="${streak()}">${streak()}</b></div><div class="stat"><span class="small mute">Лучшая серия</span><b data-count="${Math.max(S.best, streak())}">${Math.max(S.best, streak())}</b></div><div class="stat"><span class="small mute">Всего XP</span><b data-count="${S.xp}">${S.xp}</b></div><div class="stat"><span class="small mute">Уровень</span><b style="font-size:19px">${L.name}</b></div></div>
+  ${MX.weeklyCard()}
   ${ACH.html()}
   <div class="card" data-go="jobs" style="cursor:pointer"><div class="row sp"><div><div class="tag">Вакансии</div><div style="font-size:17px;font-weight:600;margin-top:2px">Вакансии и заявки</div><div class="small mute">${JOBS.jobs.length} вакансий · сегодня подано ${appsToday()} из ${DAILY_APPS}</div></div><span style="font-size:22px">›</span></div></div>
   ${XT.netProgress()}
@@ -435,6 +444,7 @@ views.settings = () => {
   <div class="card"><h2>Тема оформления</h2><div class="themes">${THEME_LIST.map(t => `<button class="theme ${cur === t.id ? 'on' : ''}" data-th="${t.id}">${sw(t)}${t.name}</button>`).join('')}</div>
   <p class="small mute" style="margin:10px 0 0;line-height:1.5">«Авто» следует за темой iPhone.</p></div>
   <div class="card"><label class="switch"><div><b>Анимации</b><div class="small mute">Переходы, заставка, конфетти</div></div><input type="checkbox" class="tg" id="anim" ${S.anim === false ? '' : 'checked'}></label></div>
+  ${MX.backupCard()}
   <div class="card"><h2>Напоминание</h2><p class="sub" style="margin-bottom:10px">Добавь ежедневное напоминание в Календарь iPhone. Оно будет приходить даже когда приложение закрыто.</p>
   <input type="time" id="rt" value="${S.remind}"><button class="btn" data-act="ics">📅 Добавить в Календарь</button></div>
   ${XT.pushCard()}
@@ -571,6 +581,8 @@ document.addEventListener('click', e => {
   const s = sess;
   switch (D.act) {
     case 'exit': return go(tab);
+    case 'jview': jobView = D.v; return render();
+    case 'jbopen': jobFilter = D.col; jobOpen = D.id; jobView = 'list'; return render();
     case 'lnext': T.track('read', { lesson: s.l.id, i: s.i, ms: T.elapsed(), len: s.l.cards[s.i].length }); s.i++; return render();
     case 'lans': case 'dans':
       if (s.askConf) { s.pend = +D.k; s.tAns = T.elapsed(); return render(); }
@@ -639,7 +651,7 @@ document.addEventListener('click', e => {
     }
     case 'clearlog': if (confirm(tr('Удалить журнал событий? Статистика по темам останется.'))) T.clearLog(); return;
     case 'reset': if (confirm(tr('Удалить весь прогресс?'))) { localStorage.removeItem(KEY); S = load(); save(); render(); } return;
-    default: if (FX.act(D.act, D) || LIB.act(D.act, D) || XT.act(D.act, D) || DEU.act(D.act, D) || ACH.act(D.act, D)) return;
+    default: if (FX.act(D.act, D) || LIB.act(D.act, D) || XT.act(D.act, D) || DEU.act(D.act, D) || ACH.act(D.act, D) || MX.act(D.act, D)) return;
   }
 });
 

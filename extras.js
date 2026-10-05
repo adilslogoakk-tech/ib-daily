@@ -82,10 +82,11 @@ const XT = (() => {
   // ===================== режим «5 минут» =====================
   function quickCard() {
     if (allDone()) return '';
-    return `<div class="card"><div class="row sp"><div style="flex:1;min-width:0"><div style="font-weight:600">⚡ Режим «5 минут»</div><div class="small mute" style="line-height:1.45;margin-top:2px">Нет времени на весь план? Ответь на 5 вопросов, и день засчитается (половина XP), серия не прервётся.</div></div></div><button class="btn ghost" data-act="quick">Начать</button></div>`;
+    return `<div class="card"><div style="font-weight:600">⚡ Быстрый режим</div><div class="small mute" style="line-height:1.45;margin-top:2px">Нет времени на весь план? Выбери, сколько минут есть: приложение подберёт вопросы, и день засчитается (половина XP), серия не прервётся.</div>
+      <div class="grid3" style="margin-top:10px">${[5, 10, 15].map(n => `<button class="btn ghost" style="margin:0" data-act="quick" data-n="${n}">${n} мин</button>`).join('')}</div></div>`;
   }
-  function quickStart() {
-    const p = T.pick('drill', 5, null, null, 'Быстрый режим');
+  function quickStart(n) {
+    const p = T.pick('drill', n || 5, null, null, 'Быстрый режим');
     sess = { type: 'drill', qs: p.map(e => e.x), why: p.map(e => e.why), qi: 0, ok: 0, picked: null, opts: null, daily: false, quick: true }; render();
   }
   function quickFinish(s) {
@@ -201,10 +202,10 @@ const XT = (() => {
   // ===================== аналитика откликов =====================
   const city = j => String(j.location || '').split(/[,(\/]/)[0].trim() || '—';
   function analyticsHtml() {
-    const rows = JOBS.jobs.map(j => ({ j, o: S.apps[j.id], st: jstat(j) })).filter(x => x.o && ['applied', 'exam', 'rejected'].includes(x.st));
+    const rows = JOBS.jobs.map(j => ({ j, o: S.apps[j.id], st: jstat(j) })).filter(x => x.o && ['applied', 'reply', 'exam', 'offer', 'rejected'].includes(x.st));
     if (!rows.length) return '';
-    const n = rows.length, exam = rows.filter(x => x.st === 'exam').length, rej = rows.filter(x => x.st === 'rejected').length;
-    const grp = fn => { const m = {}; rows.forEach(x => { const k = fn(x); if (!k) return; const g = m[k] || (m[k] = { k, n: 0, r: 0, e: 0 }); g.n++; if (x.st === 'exam') { g.e++; g.r++; } if (x.st === 'rejected') g.r++; }); return Object.values(m).sort((a, b) => b.n - a.n || b.e - a.e); };
+    const n = rows.length, exam = rows.filter(x => ['reply', 'exam', 'offer'].includes(x.st)).length, rej = rows.filter(x => x.st === 'rejected').length;
+    const grp = fn => { const m = {}; rows.forEach(x => { const k = fn(x); if (!k) return; const g = m[k] || (m[k] = { k, n: 0, r: 0, e: 0 }); g.n++; if (['reply', 'exam', 'offer'].includes(x.st)) { g.e++; g.r++; } if (x.st === 'rejected') g.r++; }); return Object.values(m).sort((a, b) => b.n - a.n || b.e - a.e); };
     const wd = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
     const by = [['Категории', grp(x => x.j.category)], ['Города', grp(x => city(x.j))], ['Источники', grp(x => x.j.source)], ['День подачи', grp(x => x.o.ap ? wd[new Date(x.o.ap + 'T00:00:00').getDay()] : '').sort((a, b) => wd.indexOf(a.k) - wd.indexOf(b.k))]];
     const gaps = rows.filter(x => x.st !== 'applied' && x.o.ap && x.o.ts).map(x => Math.max(0, dn(dkey(new Date(x.o.ts))) - dn(x.o.ap))).sort((a, b) => a - b);
@@ -360,7 +361,7 @@ const XT = (() => {
       case 'srchopen': srOpen(); return true;
       case 'srclose': srClose(); return true;
       case 'srgo': srGo(D.k, D.r); return true;
-      case 'quick': quickStart(); return true;
+      case 'quick': quickStart(+D.n || 5); return true;
       case 'mmstart': case 'mmagain': mmStart(); return true;
       case 'mmok': mmSubmit(); return true;
       case 'mmexit': stop(); go('learn'); return true;
@@ -412,6 +413,9 @@ const XT = (() => {
 
 // строки интерфейса этого модуля: русский оригинал → en, de, az
 I18N.add([
+  ['⚡ Быстрый режим', '⚡ Quick mode', '⚡ Schnellmodus', '⚡ Sürətli rejim'],
+  ['Нет времени на весь план? Выбери, сколько минут есть: приложение подберёт вопросы, и день засчитается (половина XP), серия не прервётся.', 'No time for the whole plan? Pick how many minutes you have: the app selects the questions, the day counts (half XP) and your streak stays alive.', 'Keine Zeit für den ganzen Plan? Wähle, wie viele Minuten du hast: Die App wählt die Fragen aus, der Tag zählt (halbe XP) und deine Serie bleibt erhalten.', 'Bütün plana vaxt yoxdur? Neçə dəqiqən olduğunu seç: tətbiq sualları seçir, gün sayılır (yarım XP), seriya kəsilmir.'],
+  ['{0} мин', '{0} min', '{0} Min.', '{0} dəq.'],
   ['Немецкий', 'German', 'Deutsch', 'Alman dili'],
   ['«Авто» следует за темой iPhone.', 'Auto follows the iPhone theme.', 'Auto folgt dem iPhone-Design.', '«Avto» iPhone mövzusunu izləyir.'],
   ['Заявок осталось: {0}.', 'Applications left: {0}.', 'Offene Bewerbungen: {0}.', 'Qalan müraciət: {0}.'],

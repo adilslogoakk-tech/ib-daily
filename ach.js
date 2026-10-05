@@ -4,7 +4,8 @@
 const ACH = (() => {
   const wk = () => wkey(new Date());
   const weekDays = () => { const m = new Date(wk() + 'T00:00:00'); return Array.from({ length: 7 }, (_, i) => { const d = new Date(m); d.setDate(m.getDate() + i); return dkey(d); }); };
-  const sent = () => JOBS.jobs.filter(j => ['applied', 'exam', 'rejected'].includes(jstat(j))).length;
+  const sent = () => JOBS.jobs.filter(j => ['applied', 'reply', 'exam', 'offer', 'rejected'].includes(jstat(j))).length;
+  const offers = () => JOBS.jobs.filter(j => jstat(j) === 'offer').length;
   const parts = () => Object.keys(S.read).filter(k => k.startsWith('bk:')).length;
   const quotes = () => S.later.filter(x => x.kind === 'quote').length;
   const cases = () => Object.values(S.cases).filter(c => c.done).length;
@@ -20,7 +21,7 @@ const ACH = (() => {
     ['k1', '🧩', 'Первый мини-кейс', cases, 1], ['k3', '🧠', '3 мини-кейса', cases, 3],
     ['q1', '❝', 'Первая цитата', quotes, 1], ['q10', '✍️', '10 цитат', quotes, 10],
     ['b1', '📖', 'Первая часть книги', parts, 1], ['b10', '📕', '10 частей книг', parts, 10],
-    ['w1', '🎯', 'Цель недели выполнена', wgDone, 1], ['w4', '🥇', '4 цели недели', wgDone, 4],
+    ['o1', '🎉', 'Первый оффер', offers, 1], ['w1', '🎯', 'Цель недели выполнена', wgDone, 1], ['w4', '🥇', '4 цели недели', wgDone, 4],
   ].map(([id, ic, t, cur, n]) => ({ id, ic, t, cur, n }));
 
   // тип цели: значок, подпись, варианты, текущее значение за неделю
@@ -75,6 +76,12 @@ const ACH = (() => {
 })();
 
 I18N.add([
+  ['Ответ получен', 'Reply received', 'Antwort erhalten', 'Cavab alınıb'],
+  ['Оффер', 'Offer', 'Angebot', 'Təklif'],
+  ['Первый оффер', 'First offer', 'Erstes Angebot', 'İlk təklif'],
+  ['Доска', 'Board', 'Board', 'Lövhə'], ['Список', 'List', 'Liste', 'Siyahı'],
+  ['сегодня', 'today', 'heute', 'bu gün'], ['вчера', 'yesterday', 'gestern', 'dünən'],
+  ['{0} дн. назад', '{0} days ago', 'vor {0} Tagen', '{0} gün əvvəl'],
   ['Порядок добавления', 'Date added', 'Hinzugefügt', 'Əlavə olunma sırası'],
   ['Название', 'Title', 'Titel', 'Ad'],
   ['Автор', 'Author', 'Autor', 'Müəllif'],
