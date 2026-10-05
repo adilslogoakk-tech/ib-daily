@@ -175,7 +175,7 @@ views.jobs = () => {
 // ---------- навигация ----------
 let tab = 'today', jobsFrom = 'goals', sess = null, prevTab = 'today', lastKey = '', lastNav = '', lastSub = '', subT = null, booting = true, enterT = null;
 const TABS = [['today', 'Сегодня'], ['learn', 'Учёба'], ['book', 'Книга'], ['news', 'Новости'], ['goals', 'Прогресс']];
-function go(t) { XT.stop(); if (t === 'jobs' && tab !== 'jobs') jobsFrom = tab === 'jobs' ? 'goals' : tab; FX.iv.stop(); LIB.closeSheet(); if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
+function go(t) { XT.stop(); LIB.stopListen(); if (t === 'jobs' && tab !== 'jobs') jobsFrom = tab === 'jobs' ? 'goals' : tab; FX.iv.stop(); LIB.closeSheet(); if (t === 'settings' && tab !== 'settings') prevTab = tab; tab = t; sess = null; render(); window.scrollTo(0, 0); }
 let authErr = '';
 const RU_ERR = { 'Invalid login credentials': 'Неверный email или пароль', 'User already registered': 'Такой аккаунт уже есть, нажми «Войти»', 'Email not confirmed': 'Подтверди почту по письму, затем войди' };
 function authHtml() {
@@ -268,6 +268,7 @@ views.today = () => {
   <div><h2 style="margin:0">План на сегодня</h2><p class="sub">${allDone() ? 'Готово. Увидимся завтра.' : 'Заверши три шага, чтобы продлить серию.'}</p></div></div>
   ${STEPS.map(s => `<div class="step ${done(s.id) ? 'done' : ''}" data-start="${s.id}"><div class="ic">${s.ic}</div><div><div class="t">${s.t}</div><div class="small mute">${s.d} · +${s.xp} XP</div></div><div class="chk">${done(s.id) ? '✓' : ''}</div></div>`).join('')}</div>
   ${XT.quickCard()}
+  ${MX.quoteCard(true)}
   ${evToday()}
   ${FX.fu.html()}
   ${XT.netCard()}
@@ -285,6 +286,7 @@ function coachCard() {
 }
 views.interview = () => FX.iv.html();
 views.diary = () => DV.html();
+views.qrev = () => MX.qrevHtml();
 views.mm = () => XT.mmHtml();
 views.case = () => XT.caseHtml();
 views.net = () => XT.netHtml();
@@ -295,6 +297,7 @@ views.learn = () => `
   <div class="tag">Учёба</div><h1>Концепции</h1><p class="sub">${IBL().filter(l => S.lessons.includes(l.id)).length} из ${IBL().length} уроков пройдено · ${DRILLS.filter(d => !['cfa', 'de'].includes(d.topic)).length} задач · ${CARDS.filter(c => !['cfa', 'de'].includes(c.topic)).length} карточек</p>${IBL().every(l => S.lessons.includes(l.id)) ? '<div class="card banner"><b>Все уроки пройдены</b><p class="sub" style="color:var(--mute)">Дальше идёт повторение. Новые уроки добавим позже.</p></div>' : ''}
   <div class="grid2" style="margin-top:14px"><button class="btn ghost" style="margin:0" data-start="drill-free">🧮 Задачи</button><button class="btn ghost" style="margin:0" data-start="cards">🃏 Карточки</button></div>
   <button class="btn" style="margin-top:10px" data-start="interview">🎤 Режим собеседования</button>
+  ${MX.quoteCard()}
   ${DEU.learnCard()}
   ${XT.learnCards()}
   <div class="card"><div class="tag" style="margin-bottom:8px">Цветовая карта терминов</div><div class="legend">${Object.entries(CATS).map(([k, c]) => `<span class="k k-${k}">${c.ic} ${c.name}</span>`).join('')}</div><p class="small mute" style="margin:10px 0 0">Один цвет — одна группа понятий. Запоминай по цвету.</p></div>

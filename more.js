@@ -53,17 +53,56 @@ const MX = (() => {
       ${plan.length ? `<div style="margin-top:10px"><b>План на неделю</b>${plan.map(x => `<div class="small" style="margin-top:4px">• ${x}</div>`).join('')}</div>` : ''}</div>`;
   }
 
+  // ---------- повторение цитат (как карточки: 2, 5, 12, 30, 60 дней) ----------
+  const QBOX = [2, 5, 12, 30, 60], DAY = 864e5;
+  const qlist = () => S.later.filter(x => x.kind === 'quote');
+  const qdue = x => (x.r ? x.r.due : x.ts + 2 * DAY);
+  const quotesDue = () => qlist().filter(x => qdue(x) <= Date.now()).length;
+  function qrStart() {
+    const ids = qlist().filter(x => qdue(x) <= Date.now()).sort((a, b) => qdue(a) - qdue(b)).slice(0, 10).map(x => x.ref);
+    if (!ids.length) return toast('Нет цитат на повторение');
+    sess = { type: 'qrev', ids, i: 0, flip: false, ok: 0 }; render();
+  }
+  function qrGrade(ok) {
+    const s = sess, x = S.later.find(y => y.kind === 'quote' && y.ref === s.ids[s.i]);
+    if (x) { const n = ok ? (x.r ? Math.min(QBOX.length - 1, x.r.n + 1) : 0) : 0; x.r = { n, due: Date.now() + (ok ? QBOX[n] : 1) * DAY }; if (ok) { s.ok++; addXp(2); } T.track('quote_review', { ok }); save(); }
+    s.i++; s.flip = false; render();
+  }
+  function qrevHtml() {
+    const s = sess, N = s.ids.length, head = `<div class="row sp"><button class="pill" data-act="exit">✕</button><span class="small mute">Цитата ${Math.min(s.i + 1, N)} из ${N}</span></div><div class="bar" style="margin-top:14px"><i style="width:${s.i / N * 100}%"></i></div>`;
+    if (s.i >= N) return head + `<div class="card" style="text-align:center"><h2>Серия окончена</h2><p class="sub">Знал(а): ${s.ok} из ${N}</p></div><button class="btn" data-act="exit">Готово</button>`;
+    const x = S.later.find(y => y.kind === 'quote' && y.ref === s.ids[s.i]) || { text: '', src: '' }, hint = x.text.split(' ').slice(0, 7).join(' ') + '…';
+    return head + `<div class="card"><div class="tag">Вспомни мысль</div><div class="small mute" style="margin:8px 0" translate="no">${esc(x.src)}</div>
+      ${s.flip ? `<div style="font-size:17px;line-height:1.6;font-style:italic" translate="no">${esc(x.text)}</div>` : `<div style="font-size:17px;line-height:1.6;font-style:italic" translate="no">${esc(hint)}</div>`}</div>
+      ${s.flip ? '<div class="grid2"><button class="btn ghost" data-act="qrno">Забыл(а)</button><button class="btn" data-act="qrok">Помню</button></div>' : '<button class="btn" data-act="qrflip">Показать</button>'}`;
+  }
+  function quoteCard(onlyDue) {
+    const n = qlist().length, d = quotesDue(); if (!n || (onlyDue && !d)) return '';
+    return `<div class="card"><div class="tag" style="margin-bottom:4px">Цитаты</div><p class="small mute" style="margin:0 0 8px;line-height:1.45"><span>Цитат:</span> ${n} · <span>к повторению:</span> ${d}</p>${d ? '<button class="btn ghost" style="margin:0" data-act="qrstart">Повторить</button>' : ''}</div>`;
+  }
+
   function act(a) {
     switch (a) {
+      case 'qrstart': qrStart(); return true;
+      case 'qrflip': sess.flip = true; render(); return true;
+      case 'qrok': qrGrade(true); return true;
+      case 'qrno': qrGrade(false); return true;
       case 'bkpexp': exportBackup(); return true;
       case 'bkpimp': document.getElementById('bkpfile').click(); return true;
     }
     return false;
   }
-  return { act, backupCard, weeklyCard };
+  return { act, backupCard, weeklyCard, quotesDue, quoteCard, qrevHtml };
 })();
 
 I18N.add([
+  ['Цитаты', 'Quotes', 'Zitate', 'Sitatlar'], ['Цитат:', 'Quotes:', 'Zitate:', 'Sitatlar:'], ['к повторению:', 'due for review:', 'zu wiederholen:', 'təkrar üçün:'],
+  ['Повторить', 'Review', 'Wiederholen', 'Təkrarla'], ['Цитата {0} из {1}', 'Quote {0} of {1}', 'Zitat {0} von {1}', 'Sitat {0} / {1}'],
+  ['Вспомни мысль', 'Recall the idea', 'Erinnere dich an den Gedanken', 'Fikri yadına sal'], ['Показать', 'Show', 'Anzeigen', 'Göstər'],
+  ['Помню', 'I remember', 'Weiß ich noch', 'Yadımdadır'], ['Забыл(а)', 'Forgot', 'Vergessen', 'Unutdum'], ['Нет цитат на повторение', 'No quotes to review', 'Keine Zitate zu wiederholen', 'Təkrar üçün sitat yoxdur'],
+  ['Серия окончена', 'Round finished', 'Runde beendet', 'Seriya bitdi'], ['Знал(а): {0} из {1}', 'Knew: {0} of {1}', 'Gewusst: {0} von {1}', 'Bildim: {0} / {1}'],
+  ['Поиск по книге', 'Search this book', 'In diesem Buch suchen', 'Kitabda axtar'], ['Ничего не найдено', 'Nothing found', 'Nichts gefunden', 'Heç nə tapılmadı'],
+  ['⏸ Пауза', '⏸ Pause', '⏸ Pause', '⏸ Fasilə'], ['▶ Продолжить', '▶ Resume', '▶ Weiter', '▶ Davam et'], ['Слушать', 'Listen', 'Anhören', 'Dinlə'],
   ['Резервная копия', 'Backup', 'Sicherung', 'Ehtiyat nüsxə'],
   ['Весь прогресс одним файлом: заявки, заметки, карточки, цитаты, достижения. Файл можно сохранить в «Файлы» или отправить себе.', 'All your progress in one file: applications, notes, cards, quotes, achievements. Save it to Files or send it to yourself.', 'Dein gesamter Fortschritt in einer Datei: Bewerbungen, Notizen, Karten, Zitate, Erfolge. Speichere sie in „Dateien“ oder schicke sie dir selbst.', 'Bütün irəliləyiş bir faylda: müraciətlər, qeydlər, kartlar, sitatlar, nailiyyətlər. Faylı «Fayllar»a saxla və ya özünə göndər.'],
   ['Последняя копия:', 'Last backup:', 'Letzte Sicherung:', 'Son nüsxə:'],

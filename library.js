@@ -69,6 +69,49 @@ const LIB = (() => {
     document.body.append(w); requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('open')));
   }
 
+  // ---------- слушать главу: озвучка текста системным голосом (экран должен оставаться включённым) ----------
+  const LS = { on: false, i: 0, units: [], rate: 1, paused: false, gen: 0, lang: 'en-US', last: null };
+  const lsEls = () => [...document.querySelectorAll('.book .lead, .book h3, .book p, .book li')].filter(e => (e.innerText || '').trim().length > 1 && !e.closest('.bend') && !e.classList.contains('small'));
+  const guessLang = t => { const cy = (t.match(/[А-Яа-яЁё]/g) || []).length / Math.max(1, t.length); if (cy > 0.2) return 'ru-RU'; const de = (t.match(/\b(der|die|das|und|nicht|ist|ein|eine|ich|sie|zu|mit|auf|von)\b/gi) || []).length / Math.max(1, t.split(/\s+/).length); return de > 0.12 ? 'de-DE' : 'en-US'; };
+  const lsChunks = txt => { const out = []; let cur = ''; for (const s of (txt.replace(/\s+/g, ' ').match(/[^.!?…]+[.!?…]*\s*/g) || [txt])) { if (cur && (cur + s).length > 220) { out.push(cur); cur = s; } else cur += s; } if (cur) out.push(cur); return out.flatMap(x => x.length > 260 ? x.match(/.{1,240}(\s|$)/g) : [x]); };
+  function lsBar() {
+    let b = document.getElementById('lbar');
+    if (!LS.on) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('div'); b.id = 'lbar'; document.body.append(b); }
+    b.innerHTML = `<button class="pill" data-act="lprev">⏮</button><button class="btn" style="margin:0" data-act="lpp">${LS.paused ? '▶ Продолжить' : '⏸ Пауза'}</button><button class="pill" data-act="lnext">⏭</button><button class="pill" data-act="lrate">${LS.rate}×</button><button class="pill" data-act="lstop">✕</button>`;
+  }
+  function lsMark(u) {
+    const els = lsEls(), el = els[u.ei]; if (!el || el === LS.last) return; LS.last = el;
+    document.querySelectorAll('.qs').forEach(x => x.classList.remove('qs')); el.classList.add('qs'); el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }
+  function lsSpeak() {
+    if (!LS.on) return; const u = LS.units[LS.i]; if (!u) return lsEnd();
+    const g = ++LS.gen, ut = new SpeechSynthesisUtterance(u.text); ut.lang = LS.lang; ut.rate = LS.rate;
+    const v = speechSynthesis.getVoices().find(x => x.lang.replace('_', '-').startsWith(LS.lang.slice(0, 2))); if (v) ut.voice = v;
+    const nx = () => { if (g === LS.gen && LS.on && !LS.paused) { LS.i++; lsSpeak(); } };
+    ut.onend = nx; ut.onerror = nx; lsMark(u); speechSynthesis.cancel(); speechSynthesis.speak(ut);
+  }
+  const lsBtn = () => { const b = document.querySelector('[data-act=lsn]'); if (b) b.classList.toggle('on', LS.on); };
+  function lsStart() {
+    if (!ch || tab !== 'book' || !window.speechSynthesis) return toast('Озвучка недоступна на этом устройстве');
+    const els = lsEls(); if (!els.length) return;
+    const first = Math.max(0, els.findIndex(e => e.getBoundingClientRect().top >= 60)), c = chap(ch);
+    LS.units = els.flatMap((e, ei) => ei < first ? [] : lsChunks(e.innerText).map(text => ({ ei, text })));
+    LS.lang = c.bk ? guessLang(els.slice(0, 4).map(e => e.innerText).join(' ')) : { ru: 'ru-RU', en: 'en-US', de: 'de-DE', az: 'az-AZ' }[I18N.lang] || 'en-US';
+    LS.on = true; LS.paused = false; LS.i = 0; LS.last = null; T.track('listen', { id: ch }); lsBar(); lsSpeak();
+  }
+  function lsStop() { if (!LS.on) return; LS.on = false; LS.gen++; try { speechSynthesis.cancel(); } catch (e) {} document.querySelectorAll('.qs').forEach(x => x.classList.remove('qs')); lsBar(); }
+  function lsJump(d) {
+    const cur = LS.units[LS.i]; if (!cur) return; let k = LS.i;
+    if (d > 0) { while (LS.units[k] && LS.units[k].ei === cur.ei) k++; } else { while (k > 0 && LS.units[k - 1].ei === cur.ei) k--; if (k > 0) { k--; while (k > 0 && LS.units[k - 1].ei === LS.units[k].ei) k--; } }
+    LS.i = Math.max(0, Math.min(LS.units.length - 1, k)); LS.paused = false; lsBar(); lsSpeak();
+  }
+  function lsEnd() {
+    const c = chap(ch), L = c.bk ? BK.lists[c.bid] : BOOK, nx = L[L.indexOf(c) + 1], first = !S.read[ch];
+    S.read[ch] = Date.now(); S.pos[ch] = 1; save(); T.track('read_done', { id: ch, by: 'listen' }); if (first) { addXp(20); toast('Глава прочитана · +20 XP'); }
+    lsStop(); if (nx) { open(nx.id); setTimeout(lsStart, 800); }
+  }
+
   // ---------- цитаты из книги: нажал на абзац, сохранил в «Позже» или сделал карточку ----------
   let qsel = null;
   function qbar(show) {
@@ -153,13 +196,33 @@ const LIB = (() => {
     return bar + `<div class="bklist${re ? ' re' : ''}">` + rows.map(({ b, done }, n) => {
       return `<div class="card" data-act="bkopen" data-id="${b.id}" style="cursor:pointer;--i:${Math.min(n, 10)}"><div class="tag">${b.mins} мин · ${b.parts} частей</div><div style="font-weight:600;margin:4px 0 2px;line-height:1.35" translate="no">${esc(b.title)}</div>${b.author ? `<div class="small mute" translate="no">${esc(b.author)}</div>` : ''}<div class="bar" style="margin:10px 0 4px"><i style="width:${Math.round(done / b.parts * 100)}%"></i></div><div class="small mute">${done} из ${b.parts} прочитано</div></div>`; }).join('') + '</div>';
   }
+  // поиск по тексту одной книги: находим абзацы и открываем часть сразу на нужном месте
+  const bkeys = c => c.blocks.flatMap((b, i) => b[0] === 'ul' || b[0] === 'ol' ? b[1].map((_, j) => i + '.' + j) : b[0] === 'ex' ? b[2].split('\n').map((_, j) => i + '.' + j) : ['h'].includes(b[0]) ? [] : [String(i)]);
+  function bqRes(d, id) {
+    const q = (BK.q || '').trim().toLowerCase(); if (q.length < 3) return '';
+    const hits = [];
+    for (let k = 0; k < d.parts.length && hits.length < 30; k++) {
+      const c = BK.lists[id] && BK.lists[id][k]; if (!c) continue;
+      for (const key of bkeys(c)) {
+        const t = qtext(c, key), at = t.toLowerCase().indexOf(q);
+        if (at >= 0) { hits.push({ k, key, snip: (at > 50 ? '…' : '') + t.slice(Math.max(0, at - 50), at + q.length + 80) + '…', t: c.title }); if (hits.length >= 30) break; }
+      }
+    }
+    if (!hits.length) return '<p class="small mute" style="text-align:center;padding:16px 0">Ничего не найдено</p>';
+    return '<div class="card" style="padding:4px 14px">' + hits.map(h => `<div class="goal" data-act="readch" data-id="bk:${id}:${h.k}" data-q="${h.key}" style="cursor:pointer;display:block;padding:10px 0"><div class="small mute" translate="no">${esc(h.t)}</div><div class="small" style="line-height:1.5;margin-top:2px" translate="no">${esc(h.snip)}</div></div>`).join('') + '</div>';
+  }
+  document.addEventListener('input', e => {
+    if (e.target.id !== 'bq' || !BK.open) return;
+    BK.q = e.target.value; const d = BK.docs[BK.open], r = document.getElementById('bqres'), l = document.getElementById('bplist');
+    if (d && r && l) { r.innerHTML = bqRes(d, BK.open); l.hidden = BK.q.trim().length >= 3; }
+  });
   function bookPage(id) {
     const m = BK.idx.find(x => x.id === id), d = BK.docs[id];
     const head = `<div class="row"><button class="pill" data-act="bkback">‹ Книги</button></div><div class="tag" style="margin-top:14px">Книга</div><h1 style="font-size:24px" translate="no">${esc(m ? m.title : '')}</h1>${m && m.author ? `<p class="sub" translate="no">${esc(m.author)}</p>` : ''}`;
     if (!d) { loadBook(id).then(r => { if (r && BK.open === id) render(); }); return head + '<div class="card"><p class="small mute" style="margin:0">Загрузка…</p></div>'; }
     const next = d.parts.findIndex((_, i) => bpct(id, i) < 100), mn = p => Math.max(1, Math.round(p.blocks.reduce((n, x) => n + x[1].length, 0) / 1200));
     return head + (next >= 0 ? `<button class="btn" data-act="readch" data-id="bk:${id}:${next}">${bpct(id, next) ? 'Продолжить' : 'Читать'} · ${next + 1}/${d.parts.length}</button>` : '<div class="card"><b>✓ Книга прочитана</b></div>') +
-      '<div class="card" style="padding:4px 14px">' + d.parts.map((p, i) => `<div class="goal chap" data-act="readch" data-id="bk:${id}:${i}" style="cursor:pointer;align-items:center"><div class="cn">${i + 1}</div><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3" translate="no">${esc(p.t)}</div><div class="small mute">${mn(p)} мин чтения${bpct(id, i) && bpct(id, i) < 100 ? ' · ' + bpct(id, i) + '%' : ''}</div></div><div class="chk" style="${bpct(id, i) === 100 ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${bpct(id, i) === 100 ? '✓' : ''}</div></div>`).join('') + '</div>';
+      `<input type="text" id="bq" placeholder="Поиск по книге" value="${esc(BK.q || '')}" style="margin-top:12px"><div id="bqres">${bqRes(d, id)}</div><div id="bplist" ${BK.q ? 'hidden' : ''}>` + '<div class="card" style="padding:4px 14px">' + d.parts.map((p, i) => `<div class="goal chap" data-act="readch" data-id="bk:${id}:${i}" style="cursor:pointer;align-items:center"><div class="cn">${i + 1}</div><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3" translate="no">${esc(p.t)}</div><div class="small mute">${mn(p)} мин чтения${bpct(id, i) && bpct(id, i) < 100 ? ' · ' + bpct(id, i) + '%' : ''}</div></div><div class="chk" style="${bpct(id, i) === 100 ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${bpct(id, i) === 100 ? '✓' : ''}</div></div>`).join('') + '</div></div>';
   }
   function listHtml() {
     const n = BOOK.filter(c => S.read[c.id]).length, sg = seg || (S.later.length ? 'later' : 'chapters'), cur = S.lastCh && chap(S.lastCh);
@@ -181,7 +244,7 @@ const LIB = (() => {
   function readerHtml() {
     const c = chap(ch), L = c.bk ? BK.lists[c.bid] : BOOK, i = L.indexOf(c), prev = L[i - 1], next = L[i + 1], serif = S.serif !== false;
     return `<div class="rbar"><i id="rp"></i></div>
-    <div class="row sp"><button class="pill" data-act="readclose">‹ Книга</button><div class="row" style="gap:6px"><button class="pill" data-act="fsdown">A−</button><button class="pill" data-act="fsup">A+</button><button class="pill ${serif ? 'on' : ''}" data-act="fsserif">Aa</button></div></div>
+    <div class="row sp"><button class="pill" data-act="readclose">‹ Книга</button><div class="row" style="gap:6px"><button class="pill ${LS.on ? 'on' : ''}" data-act="lsn" aria-label="Слушать">🎧</button><button class="pill" data-act="fsdown">A−</button><button class="pill" data-act="fsup">A+</button><button class="pill ${serif ? 'on' : ''}" data-act="fsserif">Aa</button></div></div>
     <div class="book ${serif ? '' : 'sans'}" style="--fs:${S.fs || 17}px"><div class="tag" style="margin-top:18px">${c.bk ? 'Часть' : 'Глава'} ${i + 1} из ${L.length} · ${c.bk ? `<span translate="no">${esc(c.tag)}</span>` : esc(c.tag)}</div><h1 class="bt" ${c.bk ? 'translate="no"' : ''}>${esc(c.title)}</h1><p class="small mute" style="margin:0 0 ${S.later.some(x => x.kind === 'quote') ? 16 : 6}px">${mins(c)} мин чтения</p>${S.later.some(x => x.kind === 'quote') ? '' : '<p class="small mute" style="margin:0 0 16px">Нажми на абзац, чтобы сохранить цитату или сделать карточку</p>'}
     ${c.intro ? `<p class="lead">${hl(c.intro)}</p>` : ''}<div ${c.bk ? 'translate="no"' : ''}>${c.blocks.map((b, bi) => block(b, c.bk, bi)).join('')}</div>
     <div class="bend"><button class="btn ${S.read[c.id] ? 'ghost' : ''}" data-act="readdone">${S.read[c.id] ? '✓ Глава прочитана' : 'Отметить прочитанной'}</button>
@@ -189,7 +252,7 @@ const LIB = (() => {
   }
   function open(id, q) {
     if (!chap(id)) return;
-    closeSheet(); ch = id; S.lastCh = id; rawSave(); T.track('read_open', { id }); go('book');
+    lsStop(); closeSheet(); ch = id; S.lastCh = id; rawSave(); T.track('read_open', { id }); go('book');
     const p = S.pos[id];
     requestAnimationFrame(() => { const el = q && document.querySelector(`[data-q="${q}"]`); if (el) return el.scrollIntoView({ block: 'center' }); if (p > 0.03 && p < 0.97) scrollTo(0, p * (document.documentElement.scrollHeight - innerHeight)); else scrollTo(0, 0); });
   }
@@ -217,14 +280,20 @@ const LIB = (() => {
         if (m && !chap(D.id)) openPart(m[1], +m[2]); else open(D.id, D.q);
         return true;
       }
+      case 'lsn': if (LS.on) lsStop(); else lsStart(); lsBtn(); return true;
+      case 'lpp': LS.paused = !LS.paused; if (LS.paused) { LS.gen++; speechSynthesis.cancel(); lsBar(); } else { lsBar(); lsSpeak(); } return true;
+      case 'lprev': lsJump(-1); return true;
+      case 'lnext': lsJump(1); return true;
+      case 'lrate': LS.rate = { 1: 1.15, 1.15: 1.3, 1.3: 0.9, 0.9: 1 }[LS.rate] || 1; lsBar(); if (!LS.paused) lsSpeak(); return true;
+      case 'lstop': lsStop(); lsBtn(); return true;
       case 'qsave': qsave(); return true;
       case 'qcard': qcard(); return true;
       case 'qmk': qmk(); return true;
       case 'qclose': qbar(false); return true;
       case 'bksort': { const o = S.bsort || { k: 'new', d: -1 }; BK.re = true; S.bsort = o.k === D.k ? { k: o.k, d: -o.d } : { k: D.k, d: D.k === 'title' || D.k === 'author' ? 1 : -1 }; save(); render(); return true; }
-      case 'bkopen': BK.open = D.id; BK.dir = 'push'; render(); return true;
+      case 'bkopen': BK.open = D.id; BK.q = ''; BK.dir = 'push'; render(); return true;
       case 'bkback': BK.open = null; BK.dir = 'pull'; render(); return true;
-      case 'readclose': qbar(false); ch = null; render(); window.scrollTo(0, 0); return true;
+      case 'readclose': lsStop(); qbar(false); ch = null; render(); window.scrollTo(0, 0); return true;
       case 'fsup': S.fs = Math.min(24, (S.fs || 17) + 1); save(); render(); return true;
       case 'fsdown': S.fs = Math.max(14, (S.fs || 17) - 1); save(); render(); return true;
       case 'fsserif': S.serif = S.serif === false; save(); render(); return true;
@@ -266,5 +335,5 @@ const LIB = (() => {
   async function openPart(bid, i) { await loadBook(bid); seg = 'books'; BK.open = bid; open('bk:' + bid + ':' + i); }
   const syncAll = () => { sync(); syncLessons(); syncDrills(); };
   syncAll();
-  return { sync: syncAll, bookData: () => BK, preloadBooks, openPart, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, sub: () => seg || '', reset: () => { ch = null; BK.open = null; } };
+  return { sync: syncAll, bookData: () => BK, preloadBooks, openPart, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, sub: () => seg || '', reset: () => { lsStop(); ch = null; BK.open = null; }, stopListen: lsStop };
 })();
