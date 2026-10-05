@@ -24,7 +24,7 @@ const FX = (() => {
       s.t0 = performance.now(); s.target = iv.target(s.q[s.i]);
       clearInterval(tm); tm = setInterval(iv.tick, 250); iv.tick();
     },
-    stop() { clearInterval(tm); tm = null; },
+    stop() { clearInterval(tm); tm = null; DV.stopMic(); },
     tick() {
       const s = sess; if (!s || s.type !== 'interview' || s.phase !== 'ask') return iv.stop();
       const el = document.getElementById('tmv'); if (!el) return;
@@ -32,11 +32,11 @@ const FX = (() => {
       el.textContent = (left < 0 ? '+' : '') + mmss(Math.abs(left)); el.classList.toggle('over', left < 0);
       const fg = document.getElementById('tmr'); if (fg) fg.style.strokeDashoffset = C * (1 - Math.min(1, sec / s.target));
     },
-    show() { const s = sess; s.spoke = Math.round(performance.now() - s.t0); s.phase = 'answer'; iv.stop(); render(); },
+    show() { const s = sess; DV.cap(s); s.spoke = Math.round(performance.now() - s.t0); s.phase = 'answer'; iv.stop(); render(); },
     // g: 0 не смог, 1 частично, 2 уверенно. Частичный ответ засчитывается слабо, как «угадал»
     grade(g) {
       const s = sess, c = s.q[s.i];
-      T.record(c.id, g >= 1, s.spoke, { conf: g === 1 ? 'guess' : null });
+      T.record(c.id, g >= 1, s.spoke, { conf: g === 1 ? 'guess' : null }); DV.rec(s, c, g);
       T.track('interview', { id: c.id, topic: c.topic, g, ms: s.spoke, target: s.target });
       addXp([3, 6, 10][g]); s.grades.push(g); s.times.push(s.spoke); s.i++; s.phase = 'ask'; render();
       if (s.i < s.q.length) iv.begin(); else if (s.grades.filter(x => x === 2).length >= 4) setTimeout(celebrate, 200);
@@ -55,9 +55,11 @@ const FX = (() => {
         return head + `<div class="card"><div class="tag">${beh ? 'Поведенческий вопрос' : 'Технический вопрос'}</div><h2 style="margin-top:6px;line-height:1.3">${hl(c.q)}</h2>
         <div class="row" style="margin-top:14px;gap:16px"><div class="ring"><svg width="104" height="104" viewBox="0 0 104 104" style="--circ:${C}"><circle class="tr" cx="52" cy="52" r="44"/><circle id="tmr" class="fg" cx="52" cy="52" r="44" stroke-dasharray="${C}" style="stroke-dashoffset:${C}"/></svg><div class="c"><b id="tmv">${mmss(t)}</b></div></div>
         <p class="small mute" style="line-height:1.5;margin:0">Ответь вслух, как на собеседовании. Цель: уложиться в ${mmss(t)}. ${beh ? 'Структура: ситуация, действие, результат.' : 'Структура: определение, шаги, вывод.'}</p></div></div>
+        ${DV.micHtml(s, c)}
         <button class="btn" data-act="ivshow">Показать эталонный ответ</button>`;
       }
       return head + `<div class="card"><div class="tag">Эталонный ответ</div><div style="font-size:16px;line-height:1.55;margin-top:8px">${hl(c.a)}</div><p class="small mute" style="margin:12px 0 0">Ты говорил(а): ${mmss(Math.round(s.spoke / 1000))} из ${mmss(s.target)}.</p><div class="lrow">${LIB.btn('card', c.id, 'Не понял, сохранить на потом')}</div></div>
+      ${DV.fbHtml(s, c)}
       <p class="small mute" style="margin:14px 0 4px">Оцени честно: насколько ответ совпал с эталоном?</p>
       <div class="gr"><button class="g0" data-act="ivgrade" data-g="0">Не смог(ла)</button><button class="g1" data-act="ivgrade" data-g="1">Частично</button><button class="g2" data-act="ivgrade" data-g="2">Уверенно</button></div>`;
     },
