@@ -183,6 +183,35 @@ const DEU = (() => {
     const ids = sh(W).slice(0, 10), qs = ids.map(w => { const same = sh(W.filter(x => x.cat === w.cat && x.i !== w.i)).slice(0, 3); const opts = sh([w, ...same]).map(x => x.i); return { id: w.i, opts, a: opts.indexOf(w.i) }; });
     sess = { type: 'de', mode: 'quiz', qs, i: 0, picked: null, ok: 0 }; render();
   }
+  // ---- «заполни пропуск»: в примере к слову прячем само слово (в той форме, как оно стоит в предложении) ----
+  const TOK = /([A-Za-zÄÖÜäöüß-]+)/;
+  const core = de => de.replace(/\s*\([^)]*\)/g, '').replace(/^(der|die|das)\s/, '');
+  function gapOf(w) {
+    const toks = w.ex.split(TOK);
+    for (const t of core(w.de).split(/\s+/).filter(x => x.length >= 4).sort((a, b) => b.length - a.length)) {
+      const stem = t.slice(0, Math.max(4, t.length - 3)).toLowerCase();
+      const k = toks.findIndex((x, j) => j % 2 === 1 && x.toLowerCase().startsWith(stem));
+      if (k >= 0) { const ans = toks[k]; return { ans, text: toks.map((x, j) => j === k ? '_____' : x).join('') }; }
+    }
+    return null;
+  }
+  let GAPS = null;
+  const gaps = () => GAPS || (GAPS = W.map(w => ({ w, g: gapOf(w) })).filter(x => x.g && x.w.ex.length > 25));
+  function startGap() {
+    const all = gaps(), pick = sh(all).slice(0, 10), qs = pick.map(({ w, g }) => {
+      const up = /^[A-ZÄÖÜ]/.test(g.ans);
+      const same = sh(all.filter(x => x.w.i !== w.i && x.g.ans.toLowerCase() !== g.ans.toLowerCase() && /^[A-ZÄÖÜ]/.test(x.g.ans) === up));
+      const near = same.filter(x => x.w.cat === w.cat).concat(same.filter(x => x.w.cat !== w.cat)).slice(0, 3).map(x => x.g.ans);
+      const opts = sh([g.ans, ...near]);
+      return { id: w.i, text: g.text, ans: g.ans, opts, a: opts.indexOf(g.ans) };
+    });
+    sess = { type: 'de', mode: 'gap', qs, i: 0, picked: null, ok: 0 }; render();
+  }
+  function gapPick(k) {
+    const s = sess, q = s.qs[s.i]; if (s.picked != null) return;
+    s.picked = k; const ok = k === q.a; if (ok) { s.ok++; addXp(3); } else { const r = st()[q.id] || (st()[q.id] = { n: 0, due: 0 }); r.n = 0; r.due = Date.now(); r.last = Date.now(); save(); }
+    T.track('de_gap', { id: q.id, ok }); render();
+  }
   const NOUNS = () => W.filter(w => /^(der|die|das)\s/.test(w.de) && !/\s(und|der|die|das|von|vor)\s/.test(w.de.replace(/^(der|die|das)\s/, '')));
   function startArt() {
     const qs = sh(NOUNS()).slice(0, 10).map(w => ({ id: w.i, a: gender(w.de) }));
@@ -229,6 +258,17 @@ const DEU = (() => {
       </div></div></div>
       ${s.flip ? '<div class="grid2"><button class="btn ghost" data-act="deno">Повторить</button><button class="btn" data-act="deyes">Знал(а)</button></div>' : ''}`;
     }
+    if (s.mode === 'gap') {
+      if (s.i >= s.qs.length) return head('Пропуски в предложениях') + `<div class="card" style="text-align:center"><h2>${s.ok} из ${s.qs.length}</h2><p class="sub">Ошибки вернутся в карточки уже сегодня.</p></div><button class="btn" data-act="dedone">Готово</button>`;
+      const q = s.qs[s.i], w = byId[q.id], p = s.picked;
+      const full = q.text.replace('_____', `<b>${esc(q.ans)}</b>`);
+      return head(`Вопрос ${s.i + 1} из ${s.qs.length}`) + `<div class="bar" style="margin-top:14px"><i style="width:${s.i / s.qs.length * 100}%"></i></div>
+      <div class="card"><div class="tag">Вставь пропущенное слово</div>
+      <div style="font-size:19px;line-height:1.5;margin:8px 0" translate="no">${p != null ? full : esc(q.text)}</div>
+      <div class="small mute">${esc(gl(w))}</div>
+      ${q.opts.map((o, k) => `<button class="opt ${p != null ? (k === q.a ? 'ok' : k === p ? 'bad' : '') : ''}" data-act="degap" data-k="${k}" ${p != null ? 'disabled' : ''} translate="no">${esc(o)}</button>`).join('')}
+      ${p != null ? `<div class="explain" translate="no">${deHtml(w.de)} ${spk(w.i, 'ex')}</div>` : ''}</div>${p != null ? '<button class="btn" data-act="denext">Дальше</button>' : ''}`;
+    }
     if (s.mode === 'art') {
       if (s.i >= s.qs.length) return head('Артикли') + `<div class="card" style="text-align:center"><h2>${s.ok} из ${s.qs.length}</h2><p class="sub">Ошибки вернутся в карточки уже сегодня.</p></div><button class="btn" data-act="dedone">Готово</button>`;
       const q = s.qs[s.i], w = byId[q.id], p = s.picked, noun = w.de.replace(/^(der|die|das)\s/, '');
@@ -250,7 +290,7 @@ const DEU = (() => {
     return `<div class="card"><div class="tag" style="margin-bottom:4px">🇩🇪 Немецкий для банкинга</div><p class="small mute" style="margin:0 0 8px;line-height:1.45">${x.n} терминов Fachbegriffe, интервью и фразы для писем. Выучено: ${x.known} из ${x.n} · к повторению: ${x.due}</p>
     <div class="grid2"><button class="btn" style="margin:0" data-act="dedeck">Карточки</button><button class="btn ghost" style="margin:0" data-act="dequizs">Тест</button></div>
     <div class="grid2" style="margin-top:8px"><button class="btn ghost" style="margin:0" data-act="deint">Интервью на немецком</button><button class="btn ghost" style="margin:0" data-act="deview">Список слов</button></div>
-    <button class="btn ghost" style="margin:8px 0 0" data-act="deartq">der · die · das: тренировка артиклей</button></div>`;
+    <div class="grid2" style="margin-top:8px"><button class="btn ghost" style="margin:0" data-act="degapq">Пропуски в предложениях</button><button class="btn ghost" style="margin:0" data-act="deartq">der · die · das</button></div></div>`;
   }
   const termLine = k => { const w = W.find(x => x.k === k); return w ? `<p class="small" style="margin:12px 0 0" translate="no">🇩🇪 <b>${deHtml(w.de)}</b></p>` : ''; };
   const detail = w => `<div class="srmore" translate="no"><div>${deHtml(w.de)}</div><div class="small">${esc(gl(w))}</div><div class="small mute" style="margin-top:4px">${esc(w.ex)}</div></div>`;
@@ -260,6 +300,8 @@ const DEU = (() => {
       case 'dequizs': startQuiz(); return true;
       case 'deview': startView(); return true;
       case 'deartq': startArt(); return true;
+      case 'degapq': startGap(); return true;
+      case 'degap': gapPick(+D.k); return true;
       case 'deart': artPick(D.g); return true;
       case 'despeak': { const w = byId[D.i]; if (w) speak(D.p === 'ex' ? w.ex : w.de.replace(/^(der|die|das)\s/, (m) => m)); return true; }
       case 'deint': startInterview(); return true;
@@ -293,6 +335,8 @@ I18N.add([
   ['Бухучёт', 'Accounting', 'Rechnungswesen', 'Mühasibat'],
   ['der · die · das: тренировка артиклей', 'der · die · das: article practice', 'der · die · das: Artikel üben', 'der · die · das: artikl məşqi'],
   ['Артикли', 'Articles', 'Artikel', 'Artikllər'],
+  ['Пропуски в предложениях', 'Fill in the gap', 'Lückentext', 'Boşluğu doldur'],
+  ['Вставь пропущенное слово', 'Fill in the missing word', 'Ergänze das fehlende Wort', 'Çatışmayan sözü əlavə et'],
   ['Какой артикль?', 'Which article?', 'Welcher Artikel?', 'Hansı artikl?'],
   ['Озвучка недоступна на этом устройстве', 'Speech is not available on this device', 'Sprachausgabe ist auf diesem Gerät nicht verfügbar', 'Bu cihazda səsləndirmə mövcud deyil'],
   ['Озвучить', 'Read aloud', 'Vorlesen', 'Səsləndir'],
