@@ -47,13 +47,22 @@ const DL = (() => {
     const k = word.toLowerCase(), loc = all().find(w => w.de.toLowerCase().replace(/^(der|die|das)\s/, '') === k || w.de.toLowerCase() === k);
     if (loc) return { ru: loc.ru, local: true };
     if (cache[k]) return cache[k];
-    try {
+    try {   // основной переводчик: Google (без ключа), для слов даёт значения по частям речи
+      const r = await (await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=de&tl=ru&dt=t&dt=bd&q=' + encodeURIComponent(word))).json();
+      const ru = (r[0] || []).map(x => x[0]).join(''), alts = (r[1] || []).map(x => ({ pos: x[0], w: x[1].slice(0, 5) }));
+      if (ru) return (cache[k] = { ru: ru.toLowerCase() === k ? '' : ru, alts });
+    } catch (e) {}
+    try {   // запасной: MyMemory
       const r = await (await fetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(word) + '&langpair=de|ru')).json();
       const ru = r && r.responseData && r.responseData.translatedText;
       if (!ru || /MYMEMORY|QUERY LENGTH/i.test(ru)) return { err: 1 };
       return (cache[k] = { ru: ru.toLowerCase() === k ? '' : ru });
     } catch (e) { return { err: 1 }; }
   }
+  const POS = { noun: 'сущ.', verb: 'глагол', adjective: 'прил.', adverb: 'нареч.', preposition: 'предлог', conjunction: 'союз', pronoun: 'мест.', article: 'артикль', interjection: 'межд.' };
+  // перевод для показа (основной вариант и значения по частям речи) и короткий вид для сохранения
+  const showTr = r => r.err ? 'Нет связи, перевод не получен' : !r.ru ? 'Перевод не найден' : `<b>${esc(r.ru)}</b>` + (r.alts || []).map(a => `<div class="small" style="margin-top:4px">${esc(POS[a.pos] || a.pos)}: ${esc(a.w.join(', '))}</div>`).join('');
+  const shortTr = r => { const u = []; [String(r.ru || '').toLowerCase(), ...(r.alts || []).flatMap(a => a.w.map(x => x.toLowerCase()))].forEach(x => { if (x && !u.includes(x)) u.push(x); }); return u.slice(0, 4).join(', '); };
   function saveWord(de, ru, ex) {
     const l = dl().my; if (l.some(x => x.de.toLowerCase() === de.toLowerCase())) return toast('Слово уже в «Моих словах»');
     l.unshift({ id: 'm' + Date.now().toString(36), de, ru, ex: ex || '' }); save(); T.track('dl_save', {}); toast('Слово сохранено');
@@ -77,7 +86,7 @@ const DL = (() => {
       <p id="dlsent" class="small" style="line-height:1.5;margin:8px 0 0"></p><div class="grid2" style="margin-top:12px"><button class="btn" style="margin:0" data-act="dlsaveword">＋ Мои слова</button><button class="btn ghost" style="margin:0" data-act="dlsent">Перевести предложение</button></div></div>`;
     document.body.append(w); requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('open')));
     const r = await lookup(h.w), el = document.getElementById('dlres'); if (!el || !cur) return;
-    cur.ru = r.ru || ''; el.textContent = r.err ? 'Нет связи, перевод не получен' : r.ru || 'Перевод не найден';
+    cur.ru = shortTr(r); el.innerHTML = showTr(r);
   }
   document.addEventListener('click', e => {
     if (S.mode !== 'de' || tab !== 'book' || !LIB.cur() || e.target.closest('button,a,#sheet,#qbar,#lbar') || !e.target.closest('.book') || String(window.getSelection())) return;
@@ -123,7 +132,7 @@ const DL = (() => {
     const r = document.getElementById('dres'); if (r) r.insertAdjacentHTML('beforeend', '<p class="small mute" id="dwait">Ищу…</p>');
     const x = await lookup(q), z = document.getElementById('dwait'); if (z) z.remove();
     if (!r) return;
-    r.insertAdjacentHTML('beforeend', x.err ? '<p class="small mute">Нет связи, перевод не получен</p>' : `<div class="card"><b translate="no">${esc(q)}</b><div style="margin:4px 0">${esc(x.ru || 'Перевод не найден')}</div>${x.ru ? `<button class="btn ghost" style="margin:6px 0 0" data-act="dlsavedict" data-de="${esc(q)}" data-ru="${esc(x.ru)}">＋ Мои слова</button>` : ''}</div>`);
+    r.insertAdjacentHTML('beforeend', x.err ? '<p class="small mute">Нет связи, перевод не получен</p>' : `<div class="card"><b translate="no">${esc(q)}</b><div style="margin:4px 0">${showTr(x)}</div>${x.ru ? `<button class="btn ghost" style="margin:6px 0 0" data-act="dlsavedict" data-de="${esc(q)}" data-ru="${esc(shortTr(x))}">＋ Мои слова</button>` : ''}</div>`);
   }
   const gramHtml = () => `${back}<div class="tag" style="margin-top:14px">Грамматика</div><h1>Скоро</h1>
     <div class="card"><p style="margin:0;line-height:1.55">Здесь будут темы по уровням (артикли и падежи, порядок слов, придаточные, прошедшее время, Passiv, Konjunktiv II) с коротким объяснением по-русски и упражнениями.</p></div>`;
@@ -144,7 +153,7 @@ const DL = (() => {
       case 'dldel': dl().my.splice(+D.i, 1); save(); render(); return true;
       case 'dlonline': online(D.q); return true;
       case 'dlsavedict': saveWord(D.de, D.ru, ''); return true;
-      case 'dlsent': { const el = document.getElementById('dlsent'); if (!el || !cur) return true; el.textContent = '…'; lookup(cur.ex).then(r => { el.textContent = r.err ? 'Нет связи, перевод не получен' : r.ru || 'Перевод не найден'; }); return true; }
+      case 'dlsent': { const el = document.getElementById('dlsent'); if (!el || !cur) return true; el.textContent = '…'; lookup(cur.ex).then(r => { el.innerHTML = r.err ? 'Нет связи, перевод не получен' : r.ru ? esc(r.ru) : 'Перевод не найден'; }); return true; }
       case 'dlsaveword': if (cur) { saveWord(cur.de, cur.ru, cur.ex); LIB.closeSheet(); } return true;
     }
     return false;
