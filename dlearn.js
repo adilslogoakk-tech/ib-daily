@@ -123,7 +123,7 @@ const DL = (() => {
     const sg = segOf('words'), x = stats(), cat = (S.seg && S.seg.dcat) || 'fam';
     let h = `${back}<div class="tag" style="margin-top:14px">Слова</div><h1>${{ learn: 'Карточки', list: 'Список слов', dict: 'Словарь', mine: 'Мои слова', sp: 'SP: из учебника' }[sg]}</h1>${segBar('words')}`;
     if (sg === 'learn') {
-      h += `<p class="sub" style="margin-top:12px">Выучено: ${x.known} из ${x.n} · к повторению: ${x.due}</p><button class="btn" data-act="dlstart">Начать 10 карточек</button><div class="sts" style="margin-top:12px">${Object.entries(DW_CATS).map(([k, n]) => `<button class="st" data-act="dlstart" data-cat="${k}">${n}</button>`).join('')}</div>`;
+      h += `<p class="sub" style="margin-top:12px">Выучено: ${x.known} из ${x.n} · к повторению: ${x.due}</p><button class="btn" data-act="dlstart">Начать 10 карточек</button><div class="grid2"><button class="btn ghost" style="margin:10px 0 0" data-act="ddstart">✍️ Диктант</button><button class="btn ghost" style="margin:10px 0 0" data-act="dpstart">🎤 Произношение</button></div><div class="sts" style="margin-top:12px">${Object.entries(DW_CATS).map(([k, n]) => `<button class="st" data-act="dlstart" data-cat="${k}">${n}</button>`).join('')}</div>`;
     } else if (sg === 'list') {
       h += `<div class="sts" style="margin:12px 0 6px">${Object.entries(DW_CATS).map(([k, n]) => `<button class="st ${cat === k ? 'on' : ''}" data-act="dlcat" data-v="${k}">${n}</button>`).join('')}</div><div class="card" style="padding:4px 14px">${DW.filter(w => w.cat === cat).map(w => `<div class="goal" style="display:block;padding:10px 0"><div style="font-weight:600;font-size:16px" translate="no">${esc(w.de)} ${spk(w.i, 'de')}</div><div class="small">${esc(w.ru)}</div><div class="small mute" style="line-height:1.45;margin-top:2px" translate="no">${esc(w.ex)}</div></div>`).join('')}</div>`;
     } else if (sg === 'sp') {
@@ -174,6 +174,13 @@ const DL = (() => {
       case 'dlonline': online(D.q); return true;
       case 'dlsavedict': saveWord(D.de, D.ru, ''); return true;
       case 'dlsent': { const el = document.getElementById('dlsent'); if (!el || !cur) return true; el.textContent = '…'; lookup(cur.ex).then(r => { el.innerHTML = r.err ? 'Нет связи, перевод не получен' : r.ru ? esc(r.ru) : 'Перевод не найден'; }); return true; }
+      case 'dqpick': {
+        const id = LIB.cur(), c = id && LIB.chapter(id); if (!c || !c.q) return true; const i = +D.q, k = +D.k, x = c.q[i];
+        const qa = (dl().qa = dl().qa || {}), st = (qa[id] = qa[id] || []); if (st[i] != null) return true; st[i] = k;
+        if (k === x.k) addXp(2); dl().days[dkey()] = (dl().days[dkey()] || 0) + 1; T.track('de_q', { ok: k === x.k }); save();
+        document.querySelectorAll(`[data-act=dqpick][data-q="${i}"]`).forEach(b => { const j = +b.dataset.k; b.disabled = true; b.classList.toggle('ok', j === x.k); b.classList.toggle('bad', j === k && j !== x.k); });
+        return true;
+      }
       case 'dlsaveword': if (cur) { saveWord(cur.de, cur.ru, cur.ex); LIB.closeSheet(); } return true;
     }
     return false;

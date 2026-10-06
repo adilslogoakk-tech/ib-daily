@@ -12,7 +12,7 @@ const LIB = (() => {
   const BK = { idx: null, docs: {}, lists: {}, tried: false, open: null, de: [] };
   // встроенные немецкие книги по уровням (режим «Немецкий»): регистрируются как обычные книги с частями
   (window.DE_BOOKS || []).forEach(b => {
-    BK.docs[b.id] = b; BK.lists[b.id] = b.parts.map((p, k) => ({ id: 'bk:' + b.id + ':' + k, bid: b.id, title: p.t, tag: b.title, intro: '', blocks: p.blocks, bk: true, idx: k }));
+    BK.docs[b.id] = b; BK.lists[b.id] = b.parts.map((p, k) => ({ id: 'bk:' + b.id + ':' + k, bid: b.id, title: p.t, tag: b.title, intro: '', blocks: p.blocks, q: p.q, bk: true, idx: k }));
     BK.de.push({ id: b.id, title: b.title, author: b.author, level: b.level, lang: 'de', parts: b.parts.length, mins: Math.max(1, Math.round(b.parts.reduce((n, p) => n + p.blocks.reduce((m, x) => m + x[1].length, 0), 0) / 1200)) });
   });
   const bdb = (mode, fn) => new Promise((res, rej) => {
@@ -260,12 +260,15 @@ const LIB = (() => {
     }
     return h;
   }
+  // вопросы к тексту (встроенные немецкие книги): ответы сохраняются в S.dl.qa
+  const qHtml = c => { const st = (S.dl && S.dl.qa && S.dl.qa[c.id]) || []; return `<div class="card" style="margin-top:22px"><div class="tag">Вопросы к тексту</div>${c.q.map((x, i) => `<div style="margin-top:14px"><div style="font-weight:600;line-height:1.4" translate="no">${esc(x.q)}</div>${x.o.map((o, k) => `<button class="opt ${st[i] != null ? (k === x.k ? 'ok' : k === st[i] ? 'bad' : '') : ''}" data-act="dqpick" data-q="${i}" data-k="${k}" ${st[i] != null ? 'disabled' : ''} translate="no">${esc(o)}</button>`).join('')}</div>`).join('')}</div>`; };
   function readerHtml() {
     const c = chap(ch), L = c.bk ? BK.lists[c.bid] : BOOK, i = L.indexOf(c), prev = L[i - 1], next = L[i + 1], serif = S.serif !== false;
     return `<div class="rbar"><i id="rp"></i></div>
     <div class="row sp"><button class="pill" data-act="readclose">‹ Книга</button><div class="row" style="gap:6px"><button class="pill ${LS.on ? 'on' : ''}" data-act="lsn" aria-label="Слушать">🎧</button><button class="pill" data-act="fsdown">A−</button><button class="pill" data-act="fsup">A+</button><button class="pill ${serif ? 'on' : ''}" data-act="fsserif">Aa</button></div></div>
     <div class="book ${serif ? '' : 'sans'}" style="--fs:${S.fs || 17}px"><div class="tag" style="margin-top:18px">${c.bk ? 'Часть' : 'Глава'} ${i + 1} из ${L.length} · ${c.bk ? `<span translate="no">${esc(c.tag)}</span>` : esc(c.tag)}</div><h1 class="bt" ${c.bk ? 'translate="no"' : ''}>${esc(c.title)}</h1><p class="small mute" style="margin:0 0 ${S.later.some(x => x.kind === 'quote') ? 16 : 6}px">${mins(c)} мин чтения</p>${S.later.some(x => x.kind === 'quote') ? '' : '<p class="small mute" style="margin:0 0 16px">Нажми на абзац, чтобы сохранить цитату или сделать карточку</p>'}
     ${c.intro ? `<p class="lead">${hl(c.intro)}</p>` : ''}<div ${c.bk ? 'translate="no"' : ''}>${c.blocks.map((b, bi) => block(b, c.bk, bi)).join('')}</div>
+    ${c.q && c.q.length ? qHtml(c) : ''}
     <div class="bend"><button class="btn ${S.read[c.id] ? 'ghost' : ''}" data-act="readdone">${S.read[c.id] ? '✓ Глава прочитана' : 'Отметить прочитанной'}</button>
     <div class="grid2" style="margin-top:10px">${prev ? `<button class="btn ghost" style="margin:0" data-act="readch" data-id="${prev.id}">‹ ${c.bk ? 'Назад' : esc(prev.title.slice(0, 22))}</button>` : '<span></span>'}${next ? `<button class="btn ghost" style="margin:0" data-act="readch" data-id="${next.id}">${c.bk ? 'Дальше' : esc(next.title.slice(0, 22))} ›</button>` : '<span></span>'}</div></div></div>`;
   }
@@ -354,5 +357,5 @@ const LIB = (() => {
   async function openPart(bid, i) { await loadBook(bid); seg = 'books'; BK.open = bid; open('bk:' + bid + ':' + i); }
   const syncAll = () => { sync(); syncLessons(); syncDrills(); };
   syncAll();
-  return { sync: syncAll, bookData: () => BK, preloadBooks, openPart, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, sub: () => S.mode === 'de' ? segOf('dbook') : seg || '', reset: () => { lsStop(); ch = null; BK.open = null; }, stopListen: lsStop };
+  return { sync: syncAll, bookData: () => BK, preloadBooks, openPart, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, sub: () => S.mode === 'de' ? segOf('dbook') : seg || '', reset: () => { lsStop(); ch = null; BK.open = null; }, stopListen: lsStop, chapter: chap };
 })();

@@ -54,8 +54,11 @@ Banken begleiten diese Prozesse als Berater. Sie bereiten Unterlagen vor, suchen
 window.DE_BOOKS = (() => {
   const L = { A1: 'Kurze Texte', A2: 'Alltagsgeschichten', B1: 'Beruf und Leben', B2: 'Wirtschaft und Gesellschaft' }, by = {};
   let cur = null;
-  window.DE_TEXT.split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
-    if (l[0] === '#') { const [lv, t] = l.slice(1).split('|'); cur = { t, blocks: [] }; (by[lv] = by[lv] || []).push(cur); }
+  // вопрос: "текст|верный|неверный|неверный"; порядок вариантов фиксирован по длине строки (верный не всегда первый)
+  const mkQ = s => { const f = s.split('|'), right = f[1], wr = f.slice(2), k = (f[0].length + right.length) % (wr.length + 1); return { q: f[0], o: [...wr.slice(0, k), right, ...wr.slice(k)], k }; };
+  (window.DE_TEXT + '\n' + (window.DE_TEXT2 || '')).split('\n').map(l => l.trim()).filter(Boolean).forEach(l => {
+    if (l[0] === '#') { const [lv, t] = l.slice(1).split('|'); cur = { t, blocks: [], q: (window.DE_Q && window.DE_Q[t] || []).map(mkQ) }; (by[lv] = by[lv] || []).push(cur); }
+    else if (l[0] === '?') cur.q.push(mkQ(l.slice(1)));
     else cur.blocks.push(['p', l]);
   });
   return Object.keys(by).map(lv => ({ id: 'de-' + lv.toLowerCase(), level: lv, title: 'Deutsch ' + lv + ' · ' + L[lv], author: 'Mandate', lang: 'de', builtin: true, parts: by[lv] }));
