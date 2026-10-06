@@ -286,6 +286,7 @@ window.DG = (() => {
   }
   function html() {
     const back = '<div class="row sp"><button class="pill" data-act="modeset" data-v="bank">⇄ Банкинг</button><span></span></div>';
+    if (window.DVB && DVB.view) return DVB.listHtml();
     if (open) {
       const t = TOP.find(x => x.id === open);
       return `<div class="row sp"><button class="pill" data-act="dgback">‹ Темы</button><span class="small mute">${t.lvl}</span></div><h1 style="margin-top:14px">${t.title}</h1>
@@ -293,7 +294,7 @@ window.DG = (() => {
       <div class="card"><div class="tag" style="margin-bottom:6px">Примеры</div>${t.ex.map(x => { const [de, ru] = x.split(' — '); return `<div style="margin:8px 0"><div translate="no">${esc(de)}</div><div class="small mute">${esc(ru || '')}</div></div>`; }).join('')}</div>
       <button class="btn" data-act="dgstart" data-id="${t.id}">Упражнения (${t.qs.length})</button>`;
     }
-    return `${back}<div class="tag" style="margin-top:14px">Грамматика</div><h1>Темы</h1><p class="sub">Объяснение по-русски и упражнения. Слабые темы отмечены.</p>
+    return `${back}<div class="tag" style="margin-top:14px">Грамматика</div><h1>Темы</h1><p class="sub">Объяснение по-русски и упражнения. Слабые темы отмечены.</p>${DVB.card()}
     ${['A1', 'A2', 'B1'].map(l => `<div class="small mute" style="margin:14px 0 4px">${l}</div><div class="card" style="padding:4px 14px">${TOP.filter(t => t.lvl === l).map(t => { const r = rate(t), g = prog()[t.id]; return `<div class="goal" data-act="dgopen" data-id="${t.id}" style="cursor:pointer;align-items:center"><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3">${t.title}</div><div class="small mute">${g && g.n ? `Верно: ${Math.round(r * 100)}% (${g.n})` : 'Не начато'}${g && g.n >= 6 && r < 0.7 ? ' · <span style="color:var(--red)">слабая тема</span>' : ''}</div></div><span style="font-size:20px;color:var(--mute)">›</span></div>`; }).join('')}</div>`).join('')}`;
   }
   // самая слабая или ещё не начатая тема: для экрана «Сегодня»

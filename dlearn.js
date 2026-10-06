@@ -9,10 +9,12 @@ const DL = (() => {
   // слова SP: выделенное в учебнике (личные данные: файл sp.json или облако), попадают в общий набор DW с темой 'sp'
   const CHAP = [[9, '1 Alltag'], [31, '2 Essen und Essgewohnheiten'], [51, '3 Im Berufsleben'], [73, '4 Lernen und Weiterbildung'], [95, '5 Städte'], [117, '6 Gesundheit und Fitness'], [137, '7 Wie wir leben'], [159, '8 Produkte und Konsum'], [181, '9 Reisen und Verkehr'], [201, '10 Medien und Aktuelles'], [223, '11 Geschichte und Politik'], [243, '12 Innovation und Kreativität']];
   const chapOf = p => { let r = CHAP[0][1]; CHAP.forEach(([s, n]) => { if (p >= s) r = n; }); return r; };
+  const chNum = p => CHAP.filter(([s]) => p >= s).length;
+  const chWords = n => DW.filter(w => w.cat === 'ch' + n || (w.cat === 'sp' && chNum(w.p) === n));
   let SPN = 0;
   function addSP(d) {
     for (let k = DW.length - 1; k >= 0; k--) if (DW[k].cat === 'sp') DW.splice(k, 1);
-    (d.items || []).forEach(x => DW.push({ i: x.id, de: x.de, ru: x.ru, ex: '', cat: 'sp', p: x.p }));
+    (d.items || []).forEach(x => DW.push({ i: x.id, de: x.de, ru: x.ru, ex: x.ex || '', cat: 'sp', p: x.p }));
     DW_CATS.sp = 'SP (из учебника)'; SPN = (d.items || []).length;
   }
   try { const c = JSON.parse(localStorage.getItem('ibdaily.sp')); if (c) addSP(c); } catch (e) {}
@@ -28,7 +30,7 @@ const DL = (() => {
 
   // ---------- карточки ----------
   function start(cat) {
-    const now = Date.now(), s = dl().w, pool = all().filter(w => cat === 'my' ? w.cat === 'my' : !cat || w.cat === cat);
+    const now = Date.now(), s = dl().w, pool = all().filter(w => cat === 'my' ? w.cat === 'my' : /^ch\d+$/.test(cat || '') ? chWords(+cat.slice(2)).includes(w) : !cat || w.cat === cat);
     const due = pool.filter(w => s[w.i] && s[w.i].due <= now), fresh = sh(pool.filter(w => !s[w.i]));
     const q = sh(due).concat(fresh).slice(0, 10).map(w => w.i);
     if (!q.length) return toast('Всё выучено на сегодня');
@@ -127,7 +129,7 @@ const DL = (() => {
     } else if (sg === 'sp') {
       if (!spTried) loadSP();
       const sp = DW.filter(w => w.cat === 'sp'), by = {}; sp.forEach(w => (by[chapOf(w.p)] = by[chapOf(w.p)] || []).push(w));
-      h += sp.length ? `<p class="sub" style="margin-top:12px">Слова, выделенные тобой в Spektrum Deutsch B1+: ${sp.length}</p><button class="btn" data-act="dlstart" data-cat="sp">Карточки: 10 слов</button>` + Object.entries(by).map(([c, l]) => `<div class="small mute" style="margin:14px 0 4px" translate="no">${c}</div><div class="card" style="padding:4px 14px">${l.map(w => `<div class="goal" style="display:block;padding:10px 0"><div class="row sp"><b translate="no">${esc(w.de)} ${spk(w.i, 'de')}</b><span class="small mute">S. ${w.p}</span></div><div class="small">${esc(w.ru)}</div></div>`).join('')}</div>`).join('')
+      h += sp.length ? `<p class="sub" style="margin-top:12px">Слова, выделенные тобой в Spektrum Deutsch B1+: ${sp.length}</p><button class="btn" data-act="dlstart" data-cat="sp">Карточки: 10 слов</button>` + Object.entries(by).map(([c, l]) => `<div class="small mute" style="margin:14px 0 4px" translate="no">${c}</div><div class="card" style="padding:4px 14px">${l.map(w => `<div class="goal" style="display:block;padding:10px 0"><div class="row sp"><b translate="no">${esc(w.de)} ${spk(w.i, 'de')}</b><span class="small mute">S. ${w.p}</span></div><div class="small">${esc(w.ru)}</div>${w.ex ? `<div class="small mute" style="line-height:1.45;margin-top:2px" translate="no">${esc(w.ex)}</div>` : ''}</div>`).join('')}</div>`).join('')
         : '<div class="card" style="margin-top:12px"><p class="small mute" style="margin:0;line-height:1.55">Здесь будут слова, которые ты выделил в учебнике. Если список пуст, проверь подключение: слова приходят из твоего облака.</p></div>';
     } else if (sg === 'dict') {
       h += `<input type="text" id="dq" placeholder="Слово по-немецки или по-русски" style="margin-top:12px" autocapitalize="off" autocorrect="off"><div id="dres">${dictRes('')}</div>`;
@@ -176,5 +178,5 @@ const DL = (() => {
     }
     return false;
   }
-  return { act, html, todayHtml, sessHtml, stats: () => ({ ...stats(), streak: streak(), days: Object.keys(dl().days).length, my: dl().my.length }) };
+  return { act, html, todayHtml, sessHtml, chWords, stats: () => ({ ...stats(), streak: streak(), days: Object.keys(dl().days).length, my: dl().my.length }) };
 })();

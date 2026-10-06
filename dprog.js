@@ -22,7 +22,7 @@ window.DP = (() => {
   const gname = id => { const t = DG.topics().find(x => x.id === id); return t ? t.title : id; };
   const flags = n => pr().done[n] || (pr().done[n] = [false, false, false, false, false]);
   const cnt = n => flags(n).filter(Boolean).length;
-  const words = n => DW.filter(w => w.cat === 'ch' + n).length;
+  const words = n => DL.chWords(n).length;
   function html() {
     const p = pr(), c = CH.find(x => x[0] === p.cur) || CH[0], f = flags(c[0]), nw = words(c[0]), g = c[7];
     const day = (k, title, body, btn) => `<div class="step ${f[k] ? 'done' : ''}" data-act="dpday" data-d="${k}" style="cursor:pointer"><div class="ic">${k + 1}</div><div style="flex:1;min-width:0"><div class="t">${title}</div><div class="small mute" style="line-height:1.45">${body}</div>${btn || ''}</div><div class="chk">${f[k] ? '✓' : ''}</div></div>`;
