@@ -121,6 +121,136 @@ window.DG_TEXT = `
 ?Als Kind ___ ich gern Fußball spielen.|wollte|will|wolle|Прошедшее время от wollen: wollte.
 ?Du ___ gestern krank.|warst|war|bist|Для «du» форма warst.
 ?Ich ___ früh aufstehen.|musste|müssen|musst|Прошедшее время от müssen для «ich»: musste.
+#prat2|B1|Präteritum и Perfekt: когда что
+@Perfekt используют в разговорной речи и в личных сообщениях, Präteritum чаще в письменной речи (рассказ, новости, книги). Но sein, haben и модальные глаголы почти всегда стоят в Präteritum и в разговоре: ich war, ich hatte, ich konnte.
+@Правильные (слабые) глаголы: основа + -te (lernen → lernte). Неправильные (сильные) меняют гласную: fahren → fuhr, gehen → ging, sehen → sah, schreiben → schrieb. Смешанные: denken → dachte, kennen → kannte, wissen → wusste.
+=Er schrieb einen Roman. — Он написал роман.|Gestern habe ich lange geschlafen. — Вчера я долго спал.|Sie kannte den Weg nicht. — Она не знала дороги.
+?Gestern ___ ich keine Zeit. (haben)|hatte|habe|hatten|Präteritum от haben для «ich»: hatte.
+?Er ___ gestern ins Kino. (gehen)|ging|geht|gegangen|Präteritum от gehen: er ging.
+?Sie ___ den Weg nicht. (kennen)|kannte|kennte|kannt|Смешанный глагол kennen: kannte.
+?Wir ___ am Montag nach Wien. (fahren)|fuhren|fahrten|gefahren|Сильный глагол fahren: wir fuhren.
+?Er ___ einen langen Brief. (schreiben)|schrieb|schreibte|schrieben|Сильный глагол schreiben: er schrieb.
+?Ich ___ nicht, dass er krank ist. (wissen)|wusste|wisste|weiß|Смешанный глагол wissen: ich wusste.
+#vprep|B1|Глаголы с предлогами
+@Многие глаголы требуют определённого предлога и падежа: warten auf + Akk., sich freuen auf + Akk. (о будущем) и über + Akk. (о настоящем), sich ärgern über + Akk., denken an + Akk., sich erinnern an + Akk., träumen von + Dat., telefonieren mit + Dat., sich interessieren für + Akk., teilnehmen an + Dat. Их нужно учить вместе с предлогом.
+@Вопрос о вещи: Worauf wartest du? О человеке: Auf wen wartest du? Ответ о вещи заменяют на da(r)- + предлог: Ich warte darauf. Ich ärgere mich darüber.
+=Ich warte auf den Bus. — Я жду автобус.|Worüber ärgerst du dich? — На что ты злишься?|Ich freue mich darauf. — Я этому радуюсь (заранее).
+?Ich warte ___ den Bus.|auf|für|über|Warten требует предлога auf + Akkusativ.
+?Sie träumt ___ einem Urlaub am Meer.|von|an|auf|Träumen требует von + Dativ.
+?Er ärgert sich ___ den Stau.|über|auf|mit|Sich ärgern требует über + Akkusativ.
+?Ich interessiere mich ___ Politik.|für|an|über|Sich interessieren требует für + Akkusativ.
+?Er nimmt ___ einer Konferenz teil.|an|auf|bei|Teilnehmen требует an + Dativ.
+?Erinnerst du dich noch ___ unseren Urlaub?|an|auf|über|Sich erinnern требует an + Akkusativ.
+#inf|B1|Инфинитив с zu: zu, um … zu, ohne … zu, statt … zu
+@Инфинитив с zu стоит после многих глаголов и выражений (versuchen, vergessen, beginnen, Lust haben, es ist wichtig): Ich versuche, früher aufzustehen. У глаголов с отделяемой приставкой zu стоит между приставкой и корнем: aufzustehen.
+@um … zu значит «чтобы» (цель, одно и то же лицо): Ich lerne, um in Deutschland zu arbeiten. ohne … zu значит «не делая»: Er ging, ohne zu grüßen. (an)statt … zu значит «вместо того чтобы»: Statt zu lernen, sieht er fern.
+=Ich habe keine Lust, heute zu arbeiten. — У меня нет желания сегодня работать.|Er lernt, um Arzt zu werden. — Он учится, чтобы стать врачом.|Sie ging, ohne etwas zu sagen. — Она ушла, ничего не сказав.
+?Ich versuche, früh ___.|aufzustehen|zu aufstehen|aufstehen zu|У отделяемой приставки zu вставляется между приставкой и глаголом: aufzustehen.
+?Er lernt Deutsch, ___ in Berlin zu arbeiten.|um|damit|weil|Цель при одном лице: um … zu.
+?Sie verließ den Raum, ___ ein Wort zu sagen.|ohne|um|statt|Ohne … zu значит «не сказав ни слова».
+?___ zu lernen, sieht er fern.|Statt|Um|Ohne|Statt … zu значит «вместо того чтобы учиться».
+?Es ist wichtig, pünktlich ___ sein.|zu|um|zum|После es ist wichtig стоит инфинитив с zu.
+?Er hofft, die Prüfung ___ bestehen.|zu|um|zum|После hoffen стоит инфинитив с zu.
+#pass|B1|Пассив (Passiv)
+@Пассив показывает, что действие происходит с предметом, а не кто его совершает. Passiv Präsens: werden + Partizip II (в конце): Das Brot wird gebacken. Präteritum: wurde + Partizip II: Das Brot wurde gebacken.
+@С модальным глаголом: модальный + Partizip II + werden: Das Auto muss repariert werden. Исполнитель (если нужен) вводится через von + Dativ: Das Buch wird von dem Autor geschrieben.
+=Das Essen wird gekocht. — Еду готовят.|Das Haus wurde 1990 gebaut. — Дом построили в 1990 году.|Die Rechnung muss bezahlt werden. — Счёт нужно оплатить.
+?Das Brot ___ jeden Morgen gebacken.|wird|werden|wurde|Пассив настоящего: wird + Partizip II, подлежащее в единственном числе.
+?Die Briefe ___ gestern geschickt.|wurden|wird|werden|Пассив прошедшего: wurden, подлежащее во множественном числе.
+?Das Auto muss repariert ___.|werden|wird|worden|С модальным глаголом пассив заканчивается на werden.
+?Der Vertrag wird von beiden Seiten ___.|unterschrieben|unterschreibt|unterschrieb|В пассиве в конце стоит Partizip II.
+?Die Hausaufgaben ___ von den Schülern gemacht.|werden|wird|wurde|Подлежащее во множественном числе, настоящее время: werden.
+?Das Problem kann gelöst ___.|werden|wird|wurden|С модальным глаголом пассив заканчивается на werden.
+#konj|B1|Konjunktiv II: вежливость и желания
+@Konjunktiv II в настоящем выражает вежливую просьбу, совет, желание и нереальное. Чаще всего: würde + инфинитив (Ich würde gern reisen.) и особые формы sein, haben, können: wäre, hätte, könnte.
+@Вежливая просьба: Könnten Sie mir helfen? Совет: An deiner Stelle würde ich mehr schlafen. Желание: Ich hätte gern einen Kaffee. Нереальное условие: Wenn ich Zeit hätte, würde ich kommen.
+=Könnten Sie mir bitte helfen? — Не могли бы вы мне помочь?|Ich hätte gern einen Tee. — Я бы хотел чаю.|Wenn ich mehr Zeit hätte, würde ich reisen. — Если бы у меня было больше времени, я бы путешествовал.
+?(höflich) ___ Sie mir bitte helfen?|Könnten|Können|Konnten|Вежливая просьба выражается формой könnten.
+?Ich ___ gern einen Kaffee.|hätte|habe|hatte|Вежливое желание: Ich hätte gern.
+?Wenn ich mehr Zeit ___, würde ich reisen.|hätte|habe|hatte|В нереальном условии стоит Konjunktiv II: hätte.
+?An deiner Stelle ___ ich mehr schlafen.|würde|werde|wurde|Совет выражается формой würde + инфинитив.
+?Wenn er reich ___, würde er ein Haus kaufen.|wäre|ist|war|В нереальном условии стоит Konjunktiv II от sein: wäre.
+?Ich ___ gern in Berlin wohnen.|würde|werde|wurde|Желание выражается формой würde + инфинитив.
+#konj2|B1|Konjunktiv II в прошедшем: «если бы тогда…»
+@Нереальное в прошлом: hätte или wäre + Partizip II. Wenn ich gestern Zeit gehabt hätte, wäre ich gekommen. С глаголами движения и изменения состояния (gehen, kommen, fahren) используется wäre, с остальными hätte.
+@Так же выражают сожаление: Ich hätte früher anfangen sollen. (Мне следовало начать раньше.) Ich wäre gern länger geblieben.
+=Wenn ich früher aufgestanden wäre, hätte ich den Zug erreicht. — Если бы я встал раньше, я бы успел на поезд.|Ich hätte mehr lernen sollen. — Мне следовало больше учиться.
+?Wenn ich Zeit gehabt ___, wäre ich gekommen.|hätte|wäre|würde|Haben образует форму с hätte: Zeit gehabt hätte.
+?Wenn er früher aufgestanden ___, hätte er den Zug erreicht.|wäre|hätte|würde|Aufstehen образует форму с wäre.
+?Ich ___ gern länger geblieben.|wäre|hätte|würde|Bleiben образует форму с wäre.
+?Wir ___ das Buch gelesen, wenn wir Zeit gehabt hätten.|hätten|wären|würden|Lesen образует форму с hätte.
+?Sie hätte mehr ___ sollen.|lernen|gelernt|lernt|После hätte с модальным глаголом стоят два инфинитива: lernen sollen.
+?Wenn es nicht geregnet ___, wären wir spazieren gegangen.|hätte|wäre|würde|Regnen образует форму с hätte.
+#kaus|B1|Причина и цель: weil, denn, deshalb, damit, um … zu
+@Причина: weil (придаточное, глагол в конце), denn (союз между главными предложениями, порядок слов не меняется), deshalb / deswegen / darum (глагол сразу после). Ich bleibe zu Hause, weil ich krank bin. = Ich bin krank, deshalb bleibe ich zu Hause.
+@Цель: damit (придаточное; одно или разные лица) и um … zu (одно лицо): Ich lerne, damit ich einen Job finde. = Ich lerne, um einen Job zu finden.
+=Ich komme nicht, denn ich bin krank. — Я не приду, потому что болен.|Er ist krank, deshalb bleibt er zu Hause. — Он болен, поэтому остаётся дома.|Sie spart, damit sie reisen kann. — Она копит, чтобы путешествовать.
+?Ich bleibe zu Hause, ___ ich krank bin.|weil|denn|deshalb|После weil глагол уходит в конец: ... weil ich krank bin.
+?Ich bin krank, ___ bleibe ich zu Hause.|deshalb|weil|damit|После deshalb глагол стоит сразу: deshalb bleibe ich.
+?Er arbeitet viel, ___ seine Kinder studieren können.|damit|um|deshalb|У придаточного другое подлежащее (Kinder), поэтому damit.
+?Ich lerne Deutsch, ___ in Deutschland zu arbeiten.|um|damit|weil|Цель при одном лице: um … zu.
+?Sie kommt nicht, ___ sie hat keine Zeit.|denn|weil|damit|После denn порядок слов обычный: sie hat keine Zeit.
+?Es regnet, ___ bleiben wir zu Hause.|deshalb|weil|denn|После deshalb глагол стоит на первом месте: bleiben wir.
+#rel|B1|Относительные придаточные (Relativsätze)
+@Относительное придаточное уточняет существительное. Относительное местоимение берёт род и число у существительного, а падеж по роли в придаточном; формы похожи на артикли: der/die/das/die; Akkusativ: den/die/das/die; Dativ: dem/der/dem/denen. Глагол стоит в конце, запятые обязательны.
+@С предлогом: предлог стоит перед местоимением: Das ist der Mann, mit dem ich arbeite. Der Mann, den ich gestern getroffen habe, ist mein Chef.
+=Das ist die Frau, die hier arbeitet. — Это женщина, которая здесь работает.|Der Film, den wir gesehen haben, war gut. — Фильм, который мы смотрели, был хорошим.|Das ist der Kollege, mit dem ich spreche. — Это коллега, с которым я говорю.
+?Das ist der Mann, ___ hier arbeitet.|der|den|dem|Мужчина — подлежащее придаточного, значит именительный: der.
+?Der Film, ___ wir gesehen haben, war gut.|den|der|dem|Film — прямое дополнение, мужской род: den.
+?Die Frau, ___ ich helfe, ist nett.|der|die|den|Helfen требует Dativ, женский род: der.
+?Das Haus, ___ ich wohne, ist alt.|in dem|das|dem|Wohnen in dem Haus: предлог in и Dativ среднего рода.
+?Die Kinder, ___ im Garten spielen, sind laut.|die|den|der|Дети — подлежащее придаточного, множественное число: die.
+?Das ist der Kollege, mit ___ ich spreche.|dem|den|der|После mit Dativ, мужской род: dem.
+#refl|B1|Возвратные глаголы
+@Возвратные глаголы используют местоимение sich: ich freue mich, du freust dich, er freut sich, wir freuen uns, ihr freut euch, sie freuen sich. Часто они требуют предлога (sich freuen auf/über, sich ärgern über, sich interessieren für).
+@Местоимение стоит сразу после спрягаемого глагола или после подлежащего-существительного: Ich ärgere mich. Heute ärgert sich mein Chef. В придаточном: ..., weil ich mich ärgere.
+=Ich freue mich auf das Wochenende. — Я радуюсь предстоящим выходным.|Er interessiert sich für Politik. — Он интересуется политикой.|Wir treffen uns um acht. — Мы встречаемся в восемь.
+?Ich freue ___ auf den Urlaub.|mich|dich|sich|Для «ich» возвратное местоимение mich.
+?Er interessiert ___ für Politik.|sich|mich|ihn|Для «er» возвратное местоимение sich.
+?Wir treffen ___ um acht Uhr.|uns|euch|sich|Для «wir» возвратное местоимение uns.
+?Du ärgerst ___ über den Stau.|dich|mich|sich|Для «du» возвратное местоимение dich.
+?Ihr entspannt ___ am Wochenende.|euch|uns|sich|Для «ihr» возвратное местоимение euch.
+?Sie bedanken ___ für die Hilfe.|sich|uns|mich|Для «sie» (они) возвратное местоимение sich.
+#konz|B1|Уступка и условие: obwohl, trotzdem, falls, sonst
+@Уступка (результат вопреки ожиданию): obwohl (придаточное, глагол в конце) и trotzdem (глагол сразу после): Obwohl es regnet, gehen wir spazieren. = Es regnet, trotzdem gehen wir spazieren.
+@Условие: wenn («если, когда») и falls («если вдруг»): придаточное. Если условие не выполнено: sonst / andernfalls (глагол сразу после): Beeil dich, sonst verpasst du den Zug.
+=Obwohl er müde ist, arbeitet er weiter. — Хотя он устал, он продолжает работать.|Falls du Zeit hast, ruf mich an. — Если вдруг будет время, позвони мне.|Lern mehr, sonst bestehst du die Prüfung nicht. — Учись больше, иначе не сдашь экзамен.
+?___ es regnet, gehen wir spazieren.|Obwohl|Trotzdem|Weil|Придаточное вопреки ожиданию начинается с obwohl.
+?Es regnet, ___ gehen wir spazieren.|trotzdem|obwohl|weil|После trotzdem глагол стоит сразу: trotzdem gehen wir.
+?Beeil dich, ___ verpasst du den Zug.|sonst|obwohl|falls|Sonst означает «иначе»: sonst verpasst du den Zug.
+?___ du Zeit hast, ruf mich an.|Falls|Obwohl|Sonst|Условие «если вдруг» выражает falls.
+?Er ist müde, ___ arbeitet er weiter.|trotzdem|obwohl|falls|После trotzdem глагол стоит сразу: trotzdem arbeitet er.
+?Er arbeitet weiter, ___ er müde ist.|obwohl|trotzdem|sonst|Придаточное с глаголом в конце: obwohl er müde ist.
+#plus|B1|Plusquamperfekt и временные придаточные
+@Plusquamperfekt («давнопрошедшее») показывает действие, которое произошло раньше другого действия в прошлом. Форма: hatte или war + Partizip II: Ich hatte gegessen, bevor er kam. Wir waren schon gegangen.
+@Союзы: nachdem (после того как; в придаточном Plusquamperfekt, в главном Präteritum или Perfekt), bevor / ehe (прежде чем), als (однократное событие в прошлом), wenn (повторяющееся), während (в то время как).
+=Nachdem er gegessen hatte, ging er schlafen. — После того как он поел, он пошёл спать.|Bevor sie ging, rief sie an. — Прежде чем уйти, она позвонила.|Als ich jung war, wohnte ich in Baku. — Когда я был молодым, я жил в Баку.
+?Nachdem er gegessen ___, ging er schlafen.|hatte|war|hat|Essen образует Plusquamperfekt с hatte.
+?Nachdem wir angekommen ___, riefen wir an.|waren|hatten|sind|Ankommen образует Plusquamperfekt с war: waren.
+?___ ich jung war, wohnte ich in Baku.|Als|Wenn|Nachdem|Однократное событие в прошлом: als.
+?___ sie ging, rief sie an.|Bevor|Nachdem|Weil|Сначала звонок, потом уход: bevor.
+?Immer ___ ich Zeit habe, lese ich.|wenn|als|nachdem|Повторяющееся действие: wenn.
+?Er hörte Musik, ___ er arbeitete.|während|nachdem|bevor|Одновременные действия: während.
+#komp|B1|Сравнение: Komparativ, Superlativ, je … desto
+@Сравнительная степень: прилагательное + -er (schneller, größer, älter; часто с умлаутом); сравнение через als: Er ist größer als ich. Равенство: so … wie. Превосходная: am + -sten (am schnellsten) или der/die/das + -ste.
+@Исключения: gut — besser — am besten, viel — mehr — am meisten, gern — lieber — am liebsten. Je … desto означает «чем … тем»: Je mehr ich lerne, desto besser verstehe ich.
+=Der Zug ist schneller als der Bus. — Поезд быстрее автобуса.|Ich esse am liebsten Pizza. — Больше всего я люблю пиццу.|Je mehr du übst, desto besser wirst du. — Чем больше ты тренируешься, тем лучше становишься.
+?Der Zug ist ___ als der Bus.|schneller|schnell|am schnellsten|После als нужна сравнительная степень: schneller.
+?Er ist ___ als ich.|älter|alt|ältest|Сравнительная степень от alt: älter.
+?Sie spricht Deutsch ___ als Englisch.|besser|gut|am besten|Сравнительная степень от gut: besser.
+?Das ist ___ Film des Jahres.|der beste|besser|am besten|Перед существительным превосходная степень: der beste.
+?Ich trinke ___ Tee als Kaffee.|lieber|gern|am liebsten|Сравнительная степень от gern: lieber.
+?Je mehr du übst, ___ besser wirst du.|desto|je|als|Конструкция je … desto: «чем … тем».
+#gen|B1|n-склонение и родительный падеж
+@Некоторые мужские существительные (der Junge, der Student, der Kollege, der Mensch, der Name) во всех падежах, кроме именительного, получают окончание -n/-en: Ich kenne den Studenten. Er hilft dem Kollegen. Это n-склонение.
+@Родительный падеж (Genitiv) показывает принадлежность: das Auto des Mannes, die Tasche der Frau. Мужской и средний род: des + существительное с -(e)s; женский род и множественное число: der. Предлоги с Genitiv: wegen, trotz, während, statt: Wegen des Regens bleiben wir zu Hause.
+=Ich kenne den Studenten. — Я знаю студента.|Das ist das Auto meines Vaters. — Это машина моего отца.|Wegen des Wetters bleiben wir hier. — Из-за погоды мы остаёмся здесь.
+?Ich kenne den ___ gut.|Studenten|Student|Studentes|N-склонение: в винительном падеже Studenten.
+?Er hilft dem ___.|Kollegen|Kollege|Kollegs|N-склонение: в дательном падеже Kollegen.
+?Das ist das Auto meines ___.|Vaters|Vater|Vaterns|Родительный падеж мужского рода: Vaters.
+?Das ist die Tasche der ___.|Frau|Frauen|Fraus|Женский род в родительном падеже: der Frau.
+?Wegen ___ Regens bleiben wir hier.|des|der|dem|После wegen родительный падеж мужского рода: des Regens.
+?Trotz ___ Kälte gehen wir raus.|der|des|dem|После trotz родительный падеж женского рода: der Kälte.
 `;
 window.DG = (() => {
   const dl = () => S.dl || (S.dl = { w: {}, my: [], days: {} });
@@ -164,7 +294,7 @@ window.DG = (() => {
       <button class="btn" data-act="dgstart" data-id="${t.id}">Упражнения (${t.qs.length})</button>`;
     }
     return `${back}<div class="tag" style="margin-top:14px">Грамматика</div><h1>Темы</h1><p class="sub">Объяснение по-русски и упражнения. Слабые темы отмечены.</p>
-    ${['A1', 'A2'].map(l => `<div class="small mute" style="margin:14px 0 4px">${l}</div><div class="card" style="padding:4px 14px">${TOP.filter(t => t.lvl === l).map(t => { const r = rate(t), g = prog()[t.id]; return `<div class="goal" data-act="dgopen" data-id="${t.id}" style="cursor:pointer;align-items:center"><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3">${t.title}</div><div class="small mute">${g && g.n ? `Верно: ${Math.round(r * 100)}% (${g.n})` : 'Не начато'}${g && g.n >= 6 && r < 0.7 ? ' · <span style="color:var(--red)">слабая тема</span>' : ''}</div></div><span style="font-size:20px;color:var(--mute)">›</span></div>`; }).join('')}</div>`).join('')}`;
+    ${['A1', 'A2', 'B1'].map(l => `<div class="small mute" style="margin:14px 0 4px">${l}</div><div class="card" style="padding:4px 14px">${TOP.filter(t => t.lvl === l).map(t => { const r = rate(t), g = prog()[t.id]; return `<div class="goal" data-act="dgopen" data-id="${t.id}" style="cursor:pointer;align-items:center"><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3">${t.title}</div><div class="small mute">${g && g.n ? `Верно: ${Math.round(r * 100)}% (${g.n})` : 'Не начато'}${g && g.n >= 6 && r < 0.7 ? ' · <span style="color:var(--red)">слабая тема</span>' : ''}</div></div><span style="font-size:20px;color:var(--mute)">›</span></div>`; }).join('')}</div>`).join('')}`;
   }
   // самая слабая или ещё не начатая тема: для экрана «Сегодня»
   const next = () => TOP.slice().sort((a, b) => (rate(a) ?? -1) - (rate(b) ?? -1))[0];

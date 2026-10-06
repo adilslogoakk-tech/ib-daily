@@ -148,5 +148,5 @@ const DL = (() => {
     }
     return false;
   }
-  return { act, html, todayHtml, sessHtml };
+  return { act, html, todayHtml, sessHtml, stats: () => ({ ...stats(), streak: streak(), days: Object.keys(dl().days).length, my: dl().my.length }) };
 })();
