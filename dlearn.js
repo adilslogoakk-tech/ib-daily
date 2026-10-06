@@ -74,7 +74,7 @@ const DL = (() => {
     const w = document.createElement('div'); w.id = 'sheet';
     w.innerHTML = `<div class="sh-bg" data-act="sheetclose"></div><div class="sh"><div class="grab"></div><div class="row sp"><h3 style="margin:0;font-size:22px" translate="no">${esc(h.w)} ${spk('', 'cur')}</h3><button class="pill" data-act="sheetclose">✕</button></div>
       <p id="dlres" style="margin:12px 0 4px;font-size:18px;min-height:26px">…</p><p class="small mute" style="line-height:1.5" translate="no">${esc(h.ctx)}</p>
-      <div class="grid2" style="margin-top:12px"><button class="btn" style="margin:0" data-act="dlsaveword">＋ Мои слова</button><button class="btn ghost" style="margin:0" data-act="sheetclose">Закрыть</button></div></div>`;
+      <p id="dlsent" class="small" style="line-height:1.5;margin:8px 0 0"></p><div class="grid2" style="margin-top:12px"><button class="btn" style="margin:0" data-act="dlsaveword">＋ Мои слова</button><button class="btn ghost" style="margin:0" data-act="dlsent">Перевести предложение</button></div></div>`;
     document.body.append(w); requestAnimationFrame(() => requestAnimationFrame(() => w.classList.add('open')));
     const r = await lookup(h.w), el = document.getElementById('dlres'); if (!el || !cur) return;
     cur.ru = r.ru || ''; el.textContent = r.err ? 'Нет связи, перевод не получен' : r.ru || 'Перевод не найден';
@@ -144,6 +144,7 @@ const DL = (() => {
       case 'dldel': dl().my.splice(+D.i, 1); save(); render(); return true;
       case 'dlonline': online(D.q); return true;
       case 'dlsavedict': saveWord(D.de, D.ru, ''); return true;
+      case 'dlsent': { const el = document.getElementById('dlsent'); if (!el || !cur) return true; el.textContent = '…'; lookup(cur.ex).then(r => { el.textContent = r.err ? 'Нет связи, перевод не получен' : r.ru || 'Перевод не найден'; }); return true; }
       case 'dlsaveword': if (cur) { saveWord(cur.de, cur.ru, cur.ex); LIB.closeSheet(); } return true;
     }
     return false;

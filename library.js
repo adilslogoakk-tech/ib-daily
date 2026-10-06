@@ -9,7 +9,12 @@ const LIB = (() => {
   const pk = n => window[n + '_' + I18N.lang.toUpperCase()];
   const byKey = k => { const g = GLOSS.find(x => x.k === k), t = pk('GLOSS'), e = g && t && t[k]; return e ? { ...g, t: e[0], d: e[1], f: e[2] || undefined } : g; };
   // ---- свои книги (EPUB, разбитые на части по ~5 минут): лежат в облаке (kv), кэшируются в IndexedDB ----
-  const BK = { idx: null, docs: {}, lists: {}, tried: false, open: null };
+  const BK = { idx: null, docs: {}, lists: {}, tried: false, open: null, de: [] };
+  // встроенные немецкие книги по уровням (режим «Немецкий»): регистрируются как обычные книги с частями
+  (window.DE_BOOKS || []).forEach(b => {
+    BK.docs[b.id] = b; BK.lists[b.id] = b.parts.map((p, k) => ({ id: 'bk:' + b.id + ':' + k, bid: b.id, title: p.t, tag: b.title, intro: '', blocks: p.blocks, bk: true, idx: k }));
+    BK.de.push({ id: b.id, title: b.title, author: b.author, level: b.level, lang: 'de', parts: b.parts.length, mins: Math.max(1, Math.round(b.parts.reduce((n, p) => n + p.blocks.reduce((m, x) => m + x[1].length, 0), 0) / 1200)) });
+  });
   const bdb = (mode, fn) => new Promise((res, rej) => {
     const o = indexedDB.open('ibdaily-books', 1);
     o.onupgradeneeded = () => o.result.createObjectStore('c');
@@ -217,14 +222,28 @@ const LIB = (() => {
     if (d && r && l) { r.innerHTML = bqRes(d, BK.open); l.hidden = BK.q.trim().length >= 3; }
   });
   function bookPage(id) {
-    const m = BK.idx.find(x => x.id === id), d = BK.docs[id];
+    const m = (BK.idx || []).find(x => x.id === id) || BK.de.find(x => x.id === id), d = BK.docs[id];
     const head = `<div class="row"><button class="pill" data-act="bkback">‹ Книги</button></div><div class="tag" style="margin-top:14px">Книга</div><h1 style="font-size:24px" translate="no">${esc(m ? m.title : '')}</h1>${m && m.author ? `<p class="sub" translate="no">${esc(m.author)}</p>` : ''}`;
     if (!d) { loadBook(id).then(r => { if (r && BK.open === id) render(); }); return head + '<div class="card"><p class="small mute" style="margin:0">Загрузка…</p></div>'; }
     const next = d.parts.findIndex((_, i) => bpct(id, i) < 100), mn = p => Math.max(1, Math.round(p.blocks.reduce((n, x) => n + x[1].length, 0) / 1200));
     return head + (next >= 0 ? `<button class="btn" data-act="readch" data-id="bk:${id}:${next}">${bpct(id, next) ? 'Продолжить' : 'Читать'} · ${next + 1}/${d.parts.length}</button>` : '<div class="card"><b>✓ Книга прочитана</b></div>') +
       `<input type="text" id="bq" placeholder="Поиск по книге" value="${esc(BK.q || '')}" style="margin-top:12px"><div id="bqres">${bqRes(d, id)}</div><div id="bplist" ${BK.q ? 'hidden' : ''}>` + '<div class="card" style="padding:4px 14px">' + d.parts.map((p, i) => `<div class="goal chap" data-act="readch" data-id="bk:${id}:${i}" style="cursor:pointer;align-items:center"><div class="cn">${i + 1}</div><div style="flex:1;min-width:0"><div style="font-weight:600;line-height:1.3" translate="no">${esc(p.t)}</div><div class="small mute">${mn(p)} мин чтения${bpct(id, i) && bpct(id, i) < 100 ? ' · ' + bpct(id, i) + '%' : ''}</div></div><div class="chk" style="${bpct(id, i) === 100 ? 'background:var(--green);border-color:var(--green);color:var(--bg)' : ''}">${bpct(id, i) === 100 ? '✓' : ''}</div></div>`).join('') + '</div></div>';
   }
+  // ---------- режим «Немецкий»: книги на немецком по уровням ----------
+  const bookCard = b => { const done = Array.from({ length: b.parts }, (_, i) => bpct(b.id, i) === 100).filter(Boolean).length; return `<div class="card" data-act="bkopen" data-id="${b.id}" style="cursor:pointer"><div class="tag">${b.mins} мин · ${b.parts} частей</div><div style="font-weight:600;margin:4px 0 2px;line-height:1.35" translate="no">${esc(b.title)}</div>${b.author ? `<div class="small mute" translate="no">${esc(b.author)}</div>` : ''}<div class="bar" style="margin:10px 0 4px"><i style="width:${Math.round(done / b.parts * 100)}%"></i></div><div class="small mute">${done} из ${b.parts} прочитано</div></div>`; };
+  function deLib() {
+    const dir = BK.dir; BK.dir = null; let h;
+    if (BK.open) h = bookPage(BK.open);
+    else {
+      const sg = segOf('dbook'); if (sg === 'classic' && !BK.tried) loadIndex();
+      const list = sg === 'classic' ? (BK.idx || []).filter(b => b.lang === 'de') : BK.de.filter(b => b.level === sg);
+      h = `<div class="row sp"><button class="pill" data-act="modeset" data-v="bank">⇄ Банкинг</button><span></span></div><div class="tag" style="margin-top:14px">Книги</div><h1>На немецком</h1><p class="sub">Тексты по уровням. Нажми на любое слово: появится перевод.</p>${segBar('dbook')}`
+        + (list.length ? list.map(bookCard).join('') : `<div class="card"><p class="small mute" style="margin:0;line-height:1.55">${sg === 'classic' ? (BK.idx ? 'Здесь будут классические книги на немецком из облака (Kafka, Goethe, Mann).' : 'Загрузка…') : 'Скоро'}</p></div>`);
+    }
+    return dir ? `<div class="${dir}">${h}</div>` : h;
+  }
   function listHtml() {
+    if (S.mode === 'de') return deLib();
     const n = BOOK.filter(c => S.read[c.id]).length, sg = seg || (S.later.length ? 'later' : 'chapters'), cur = S.lastCh && chap(S.lastCh);
     let h = `<div class="tag">Книга</div><h1>Библиотека</h1><p class="sub">${BOOK.length} глав · прочитано ${n}</p>`;
     if (cur && !S.read[cur.id]) h += `<div class="card" data-act="readch" data-id="${cur.id}" style="cursor:pointer"><div class="tag">Продолжить чтение</div><div style="font-weight:600;margin-top:4px">${esc(cur.title)}</div>${S.pos[cur.id] ? `<div class="bar" style="margin:10px 0 0"><i style="width:${Math.round(S.pos[cur.id] * 100)}%"></i></div>` : ''}</div>`;
@@ -335,5 +354,5 @@ const LIB = (() => {
   async function openPart(bid, i) { await loadBook(bid); seg = 'books'; BK.open = bid; open('bk:' + bid + ':' + i); }
   const syncAll = () => { sync(); syncLessons(); syncDrills(); };
   syncAll();
-  return { sync: syncAll, bookData: () => BK, preloadBooks, openPart, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, sub: () => seg || '', reset: () => { lsStop(); ch = null; BK.open = null; }, stopListen: lsStop };
+  return { sync: syncAll, bookData: () => BK, preloadBooks, openPart, find, byKey, openTerm, closeSheet, btn, act, html: () => ch && chap(ch) ? readerHtml() : listHtml(), cur: () => ch, sub: () => S.mode === 'de' ? segOf('dbook') : seg || '', reset: () => { lsStop(); ch = null; BK.open = null; }, stopListen: lsStop };
 })();
