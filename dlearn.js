@@ -91,6 +91,7 @@ const DL = (() => {
     return `${back}<div class="tag" style="margin-top:14px">Немецкий</div><h1>Сегодня</h1><p class="sub">Немного каждый день важнее, чем много раз в неделю</p>
     <div class="row" style="margin-top:14px;gap:8px"><span class="pill"><span class="flame">🔥</span> <span>${streak()}</span> дн.</span><span class="pill">Слов выучено: ${x.known} из ${x.n}</span></div>
     <div class="card"><h2>Карточки</h2><p class="small mute" style="margin:6px 0 0">К повторению: ${x.due}. Сегодня повторено: ${n}.</p><button class="btn" data-act="dlstart">Начать 10 карточек</button></div>
+    ${DG.todayCard()}
     <div class="card"><h2>Читать или слушать</h2><p class="small mute" style="margin:6px 0 0;line-height:1.5">Открой немецкую книгу, нажми на незнакомое слово, и оно сохранится в «Мои слова».</p><button class="btn ghost" data-go="book">К книгам</button></div>
     ${dl().my.length ? `<div class="card"><h2>Мои слова</h2><p class="small mute" style="margin:6px 0 0">Сохранено: ${dl().my.length}</p><button class="btn ghost" data-act="dlstart" data-cat="my">Повторить мои слова</button></div>` : ''}`;
   }
@@ -127,7 +128,7 @@ const DL = (() => {
   const gramHtml = () => `${back}<div class="tag" style="margin-top:14px">Грамматика</div><h1>Скоро</h1>
     <div class="card"><p style="margin:0;line-height:1.55">Здесь будут темы по уровням (артикли и падежи, порядок слов, придаточные, прошедшее время, Passiv, Konjunktiv II) с коротким объяснением по-русски и упражнениями.</p></div>`;
   const progHtml = () => { const x = stats(), days = Object.keys(dl().days).length; return `${back}<div class="tag" style="margin-top:14px">Программа</div><h1>Мой немецкий</h1>
-    <div class="grid2" style="margin-top:14px"><div class="stat"><span class="small mute">Серия</span><b>${streak()}</b></div><div class="stat"><span class="small mute">Дней занятий</span><b>${days}</b></div><div class="stat"><span class="small mute">Слов выучено</span><b>${x.known}</b></div><div class="stat"><span class="small mute">Мои слова</span><b>${dl().my.length}</b></div></div>
+    <div class="grid2" style="margin-top:14px"><div class="stat"><span class="small mute">Серия</span><b>${streak()}</b></div><div class="stat"><span class="small mute">Дней занятий</span><b>${days}</b></div><div class="stat"><span class="small mute">Слов выучено</span><b>${x.known}</b></div><div class="stat"><span class="small mute">Мои слова</span><b>${dl().my.length}</b></div><div class="stat"><span class="small mute">Грамматика, верно</span><b>${(g => g.n ? Math.round(g.ok / g.n * 100) + '%' : '–')(DG.stat())}</b></div></div>
     <div class="card"><h2>Программа из учебника</h2><p class="small mute" style="margin:6px 0 0;line-height:1.55">Пришли учебник в PDF, и я составлю недельный план: слова и грамматика по урокам, упражнения и чтение.</p></div>`; };
   const html = t => t === 'words' ? wordsHtml() : t === 'gram' ? gramHtml() : progHtml();
 

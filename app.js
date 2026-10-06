@@ -295,7 +295,8 @@ views.diary = () => DV.html();
 views.qrev = () => MX.qrevHtml();
 views.dl = () => DL.sessHtml();
 views.words = () => DL.html('words');
-views.gram = () => DL.html('gram');
+views.gram = () => DG.html();
+views.dg = () => DG.sessHtml();
 views.prog = () => DL.html('prog');
 views.mm = () => XT.mmHtml();
 views.case = () => XT.caseHtml();
@@ -685,7 +686,7 @@ document.addEventListener('click', e => {
     }
     case 'clearlog': if (confirm(tr('Удалить журнал событий? Статистика по темам останется.'))) T.clearLog(); return;
     case 'reset': if (confirm(tr('Удалить весь прогресс?'))) { localStorage.removeItem(KEY); S = load(); save(); render(); } return;
-    default: if (FX.act(D.act, D) || LIB.act(D.act, D) || XT.act(D.act, D) || DEU.act(D.act, D) || ACH.act(D.act, D) || MX.act(D.act, D) || DV.act(D.act, D) || DL.act(D.act, D)) return;
+    default: if (FX.act(D.act, D) || LIB.act(D.act, D) || XT.act(D.act, D) || DEU.act(D.act, D) || ACH.act(D.act, D) || MX.act(D.act, D) || DV.act(D.act, D) || DL.act(D.act, D) || DG.act(D.act, D)) return;
   }
 });
 
